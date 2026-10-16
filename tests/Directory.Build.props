@@ -1,0 +1,9 @@
+<Project>
+	<Import Project="..\Directory.Build.props" />
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+		<!-- The tests use the packages of artifacts/packages, as an application does. -->
+		<ChromaDotNetLocalVersion>$(VersionPrefix)-$(VersionSuffix)</ChromaDotNetLocalVersion>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+	</PropertyGroup>
+</Project>

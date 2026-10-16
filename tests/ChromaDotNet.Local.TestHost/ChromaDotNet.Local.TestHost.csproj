@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFrameworks>net8.0</TargetFrameworks>
+		<!-- .NET Framework, through the netstandard2.0 build of ChromaDotNet.Local, on Windows. -->
+		<TargetFrameworks Condition="'$(OS)' == 'Windows_NT' And '$(LocalPackages)' == ''">net8.0;net48</TargetFrameworks>
+		<!-- -p:Aot=true publishes the .NET 8 build with NativeAOT, to check that ChromaDotNet.Local works there. -->
+		<PublishAot Condition="'$(Aot)' == 'true' And '$(TargetFramework)' == 'net8.0'">true</PublishAot>
+	</PropertyGroup>
+	<!-- The two ways to reference the package. By default ChromaDotNet.Local, with the executables of every platform.
+	     -p:LocalPackages=core-rid: ChromaDotNet.Local.Core and the runtime package of this machine only.
+	     -p:LocalPackages=core: ChromaDotNet.Local.Core alone, without an executable. -->
+	<ItemGroup Condition="'$(LocalPackages)' == ''">
+		<PackageReference Include="ChromaDotNet.Local" Version="$(ChromaDotNetLocalVersion)" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(LocalPackages)' != ''">
+		<PackageReference Include="ChromaDotNet.Local.Core" Version="$(ChromaDotNetLocalVersion)" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(LocalPackages)' == 'core-rid'">
+		<PackageReference Include="ChromaDotNet.Local.Runtime.$(NETCoreSdkRuntimeIdentifier)" Version="$(ChromaDotNetLocalVersion)" />
+	</ItemGroup>
+</Project>

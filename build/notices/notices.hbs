@@ -1,0 +1,67 @@
+# Third-party notices of the Chroma executable
+
+The Chroma executable in the ChromaDotNet.Local.Runtime packages contains the crates below, for the platforms win-x64, linux-x64,
+linux-arm64, osx-x64 and osx-arm64. The list and the texts come from `cargo about` on the Cargo.lock of the tag of the Chroma CLI,
+with the normal dependencies of the `chroma-cli` crate only.
+
+## Crates without a license field
+
+These crates have no `license` field, so `cargo about` does not list them below:
+
+- The crates of Chroma itself, in the repository https://github.com/chroma-core/chroma: chroma-blockstore, chroma-cache,
+  chroma-cli, chroma-config, chroma-frontend, chroma-index, chroma-log, chroma-memberlist, chroma-metering,
+  chroma-metering-macros, chroma-segment, chroma-sqlite, chroma-storage, chroma-sysdb, chroma-system, chroma-tracing, and the
+  other crates of that repository in the executable. They are under the Apache License 2.0 of the repository, in LICENSE.txt.
+- hnswlib 0.8.2, https://github.com/chroma-core/hnswlib (commit 6868102bde454dc761136e1994490133a6a026bb): Apache License 2.0,
+  the text of which is below.
+- jsonpath-rust 0.3.5, https://github.com/besok/jsonpath-rust: MIT License, file LICENSE of the tag v0.3.5:
+
+```
+MIT License
+
+Copyright (c) [2021] [Boris Zhguchev]
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## Crates under the Mozilla Public License 2.0
+
+colored 3.1.1 and option-ext 0.2.0 are under the Mozilla Public License 2.0. The executable contains them unchanged; their source
+code is at https://crates.io/crates/colored/3.1.1 and https://crates.io/crates/option-ext/0.2.0. The text of the license is below.
+
+## Licenses
+
+{{#each overview}}
+- {{{name}}}: {{count}} crates
+{{/each}}
+
+{{#each licenses}}
+## {{{name}}}
+
+Used by:
+
+{{#each used_by}}
+- [{{crate.name}} {{crate.version}}]({{#if crate.repository}}{{{crate.repository}}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}})
+{{/each}}
+
+```
+{{{text}}}
+```
+
+{{/each}}

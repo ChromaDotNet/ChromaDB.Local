@@ -1,0 +1,27 @@
+#nullable enable
+ChromaDotNet.Local.ChromaLocalOptions
+ChromaDotNet.Local.ChromaLocalOptions.ChromaLocalOptions() -> void
+ChromaDotNet.Local.ChromaLocalOptions.DataPath.get -> string?
+ChromaDotNet.Local.ChromaLocalOptions.DataPath.set -> void
+ChromaDotNet.Local.ChromaLocalOptions.ExecutablePath.get -> string?
+ChromaDotNet.Local.ChromaLocalOptions.ExecutablePath.set -> void
+ChromaDotNet.Local.ChromaLocalOptions.Logger.get -> Microsoft.Extensions.Logging.ILogger?
+ChromaDotNet.Local.ChromaLocalOptions.Logger.set -> void
+ChromaDotNet.Local.ChromaLocalOptions.Port.get -> int?
+ChromaDotNet.Local.ChromaLocalOptions.Port.set -> void
+ChromaDotNet.Local.ChromaLocalOptions.ShutdownTimeout.get -> System.TimeSpan
+ChromaDotNet.Local.ChromaLocalOptions.ShutdownTimeout.set -> void
+ChromaDotNet.Local.ChromaLocalOptions.StartupTimeout.get -> System.TimeSpan
+ChromaDotNet.Local.ChromaLocalOptions.StartupTimeout.set -> void
+ChromaDotNet.Local.ChromaLocalServer
+ChromaDotNet.Local.ChromaLocalServer.CreateClient() -> ChromaDB.Client.ChromaClient!
+ChromaDotNet.Local.ChromaLocalServer.DataPath.get -> string!
+ChromaDotNet.Local.ChromaLocalServer.Dispose() -> void
+ChromaDotNet.Local.ChromaLocalServer.DisposeAsync() -> System.Threading.Tasks.ValueTask
+ChromaDotNet.Local.ChromaLocalServer.HasExited.get -> bool
+ChromaDotNet.Local.ChromaLocalServer.Port.get -> int
+ChromaDotNet.Local.ChromaLocalServer.ProcessId.get -> int
+ChromaDotNet.Local.ChromaLocalServer.StopAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+ChromaDotNet.Local.ChromaLocalServer.Uri.get -> System.Uri!
+static ChromaDotNet.Local.ChromaLocalServer.ChromaVersion.get -> string!
+static ChromaDotNet.Local.ChromaLocalServer.StartAsync(ChromaDotNet.Local.ChromaLocalOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<ChromaDotNet.Local.ChromaLocalServer!>!

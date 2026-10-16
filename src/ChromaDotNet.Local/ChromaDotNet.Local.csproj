@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<!-- ChromaDotNet.Local: no code of its own, a dependency on ChromaDotNet.Local.Core and on the runtime package of each platform, as
+	     Microsoft.ML.OnnxRuntime and the bundles of SQLitePCLRaw do. For one platform only: ChromaDotNet.Local.Core and that runtime. -->
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<IsPackable>true</IsPackable>
+		<PackageId>ChromaDotNet.Local</PackageId>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+		<!-- NU5128: no lib folder, on purpose. -->
+		<NoWarn>$(NoWarn);NU5128</NoWarn>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageDescription>Chroma $(ChromaVersion) on this machine, without Docker and without Python, for ChromaDotNet.Client: ChromaLocalServer.StartAsync starts the official Chroma executable as a child process on 127.0.0.1, and stops it with Dispose or when the application ends. With the executables for Windows x64, Linux x64 and arm64 (glibc 2.28 and later), macOS x64 and arm64; for one platform only, ChromaDotNet.Local.Core and the ChromaDotNet.Local.Runtime package of that platform. Community project, not affiliated with Chroma.</PackageDescription>
+	</PropertyGroup>
+	<ItemGroup>
+		<!-- build/pack.sh packs these first, into artifacts/packages. -->
+		<PackageReference Include="ChromaDotNet.Local.Core" Version="$(Version)" PrivateAssets="none" />
+		<PackageReference Include="ChromaDotNet.Local.Runtime.win-x64" Version="$(Version)" PrivateAssets="none" />
+		<PackageReference Include="ChromaDotNet.Local.Runtime.linux-x64" Version="$(Version)" PrivateAssets="none" />
+		<PackageReference Include="ChromaDotNet.Local.Runtime.linux-arm64" Version="$(Version)" PrivateAssets="none" />
+		<PackageReference Include="ChromaDotNet.Local.Runtime.osx-x64" Version="$(Version)" PrivateAssets="none" />
+		<PackageReference Include="ChromaDotNet.Local.Runtime.osx-arm64" Version="$(Version)" PrivateAssets="none" />
+	</ItemGroup>
+</Project>

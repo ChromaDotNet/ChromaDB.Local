@@ -1,0 +1,139 @@
+# Builds the Linux executables on runners of their own architecture, takes the official ones of Windows and macOS, packs, and runs
+# on each platform the tests of the package, the two ways to reference it, the tests of the guard and the suite of the client.
+# It publishes nothing: the packages stay in the artifacts of the run.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-executables:
+    name: Linux ${{ matrix.arch }} executables
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build chroma and the guard from the tag of the Chroma CLI
+        run: bash build/build-linux-docker.sh ${{ matrix.arch }}
+      - name: Third-party notices
+        if: matrix.arch == 'x64'
+        run: bash build/third-party-notices.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-${{ matrix.arch }}
+          path: artifacts/linux
+      - uses: actions/upload-artifact@v7
+        if: matrix.arch == 'x64'
+        with:
+          name: third-party-notices
+          path: THIRD-PARTY-NOTICES.md
+
+  official-and-guard:
+    name: Official executables and the macOS guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Official executables of Windows and macOS, checked against the digests of the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash build/fetch-official.sh
+      - name: Guard for macOS
+        run: bash build/build-guard-macos.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: official-and-guard
+          path: |
+            artifacts/official
+            artifacts/guard
+
+  pack:
+    name: Pack
+    needs: [linux-executables, official-and-guard]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts/download
+      - name: Put the executables where the runtime projects take them
+        run: |
+          mkdir -p artifacts/linux
+          cp -r artifacts/download/linux-x64/. artifacts/linux/
+          cp -r artifacts/download/linux-arm64/. artifacts/linux/
+          cp -r artifacts/download/official-and-guard/. artifacts/
+          cp artifacts/download/third-party-notices/THIRD-PARTY-NOTICES.md .
+          find artifacts/linux artifacts/official artifacts/guard -type f | sort
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: bash build/pack.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: artifacts/packages
+
+  test:
+    name: Tests on ${{ matrix.runner }}
+    needs: pack
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-latest, ubuntu-24.04, ubuntu-24.04-arm, macos-latest, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: artifacts/packages
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Runner
+        run: |
+          uname -a
+          dotnet --info | grep -E "RID|OS Name|OS Version|Architecture" | sort -u
+      - name: Tests of the package
+        run: dotnet test tests/ChromaDotNet.Local.Tests -c Release --logger "console;verbosity=normal"
+      - name: Tests of the guard
+        if: runner.os != 'Windows'
+        run: |
+          guard=$(find artifacts/nuget-cache -path '*/runtimes/*/native/chroma-local-guard' | grep "$(dotnet --info | awk '/ RID:/ {print $2; exit}')" | head -1)
+          echo "guard: $guard"
+          chmod +x "$guard"
+          bash guard/test-guard.sh "$guard"
+      - name: The two ways to reference the package
+        run: bash build/package-modes.sh
+      - name: Suite of the client against ChromaDotNet.Local
+        run: SUITE_LOG=suite.log bash build/client-suite.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: logs-${{ matrix.runner }}
+          path: suite.log
+          if-no-files-found: ignore

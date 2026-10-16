@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
+		<IsPackable>true</IsPackable>
+		<!-- The analyzers of trimming and NativeAOT run on the target that has them. -->
+		<IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">true</IsAotCompatible>
+		<PackageId>ChromaDotNet.Local.Core</PackageId>
+		<!-- The assembly and the namespace are those of ChromaDotNet.Local, the package most applications reference. -->
+		<AssemblyName>ChromaDotNet.Local</AssemblyName>
+		<RootNamespace>ChromaDotNet.Local</RootNamespace>
+		<PackageDescription>The code of ChromaDotNet.Local, without the Chroma executables: add the ChromaDotNet.Local.Runtime package of each platform the application runs on, or reference ChromaDotNet.Local, which brings them all. ChromaLocalServer.StartAsync starts Chroma $(ChromaVersion) as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. Community project, not affiliated with Chroma.</PackageDescription>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<!-- RS0026 and RS0027: overloads with optional parameters, as in the client. -->
+		<NoWarn>$(NoWarn);RS0026;RS0027</NoWarn>
+	</PropertyGroup>
+	<ItemGroup>
+		<AssemblyMetadata Include="ChromaVersion" Value="$(ChromaVersion)" />
+		<AssemblyMetadata Include="ChromaCliTag" Value="$(ChromaCliTag)" />
+		<InternalsVisibleTo Include="ChromaDotNet.Local.Tests" />
+	</ItemGroup>
+	<ItemGroup>
+		<!-- The public API, checked at build, as in the client. -->
+		<PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
+		<PackageReference Include="ChromaDotNet.Client" Version="2.14.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<!-- IAsyncDisposable and ValueTask come from Microsoft.Bcl.AsyncInterfaces, which ChromaDotNet.Client brings in the version of
+		     each of its targets: a reference here would downgrade it on .NET Framework. -->
+		<PackageReference Include="PolySharp" Version="1.14.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+</Project>
