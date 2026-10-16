@@ -122,11 +122,12 @@ jobs:
         run: dotnet test tests/ChromaDotNet.Local.Tests -c Release --logger "console;verbosity=normal"
       - name: Tests of the guard
         if: runner.os != 'Windows'
+        timeout-minutes: 5
         run: |
           guard=$(find artifacts/nuget-cache -path '*/runtimes/*/native/chroma-local-guard' | grep "$(dotnet --info | awk '/ RID:/ {print $2; exit}')" | head -1)
           echo "guard: $guard"
           chmod +x "$guard"
-          bash guard/test-guard.sh "$guard"
+          python3 guard/test_guard.py "$guard"
       - name: The two ways to reference the package
         run: bash build/package-modes.sh
       - name: Suite of the client against ChromaDotNet.Local

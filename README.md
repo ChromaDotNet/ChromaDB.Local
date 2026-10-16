@@ -98,7 +98,7 @@ which `build/third-party-notices.sh` writes before the pack.
 - `build/build-guard-macos.sh`: the guard for macOS, with zig.
 - `build/third-party-notices.sh`: THIRD-PARTY-NOTICES.md, with cargo about.
 - `build/pack.sh`: the packages, in artifacts/packages.
-- Tests: `dotnet test tests/ChromaDotNet.Local.Tests`, `guard/test-guard.sh`, `build/package-modes.sh`, and
+- Tests: `dotnet test tests/ChromaDotNet.Local.Tests`, `guard/test_guard.py`, `build/package-modes.sh`, and
   `build/client-suite.sh`, the tests of ChromaDotNet.Client against a Chroma started by this package. `build/linux-tests.sh` runs
   them in a Linux container.
 
