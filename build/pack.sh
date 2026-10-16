@@ -8,7 +8,12 @@ dotnet build-server shutdown >/dev/null 2>&1 || true
 rm -f artifacts/packages/ChromaDotNet.Local*.nupkg artifacts/packages/ChromaDotNet.Local*.snupkg
 rm -rf artifacts/nuget-cache/chromadotnet.local*
 for project in src/runtimes/*/ChromaDotNet.Local.Runtime.*.csproj src/ChromaDotNet.Local.Core/ChromaDotNet.Local.Core.csproj src/ChromaDotNet.Local/ChromaDotNet.Local.csproj; do
-  dotnet pack "$project" -c Release --nologo -v q "$@" | grep -E "error|warning|Successfully created" || true
+  if ! output=$(dotnet pack "$project" -c Release --nologo -v q "$@" 2>&1); then
+    echo "$output" | grep -E "error|warning" >&2
+    echo "pack failed: $project" >&2
+    exit 1
+  fi
+  echo "$output" | grep -E "warning|Successfully created" || true
 done
 rm -rf artifacts/nuget-cache/chromadotnet.local*
 dotnet build-server shutdown >/dev/null 2>&1 || true

@@ -18,16 +18,17 @@
 		<ChromaGuard>$(MSBuildThisFileDirectory)..\..\artifacts\guard\$(ChromaRid)\chroma-local-guard</ChromaGuard>
 		<ChromaGuard Condition="'$(ChromaSource)' == 'linux'">$(ChromaBinaries)chroma-local-guard</ChromaGuard>
 	</PropertyGroup>
+	<!-- The folders of PackagePath without a slash at the end: on Linux "native\" gives "native//chroma" in the package. -->
 	<ItemGroup>
-		<None Include="$(ChromaBinaries)$(ChromaExe)" Condition="Exists('$(ChromaBinaries)$(ChromaExe)')" Pack="true" PackagePath="runtimes\$(ChromaRid)\native\" Visible="false" />
-		<None Include="$(ChromaGuard)" Pack="true" PackagePath="runtimes\$(ChromaRid)\native\" Visible="false" Condition="'$(ChromaRid)' != 'win-x64' And Exists('$(ChromaGuard)')" />
+		<None Include="$(ChromaBinaries)$(ChromaExe)" Condition="Exists('$(ChromaBinaries)$(ChromaExe)')" Pack="true" PackagePath="runtimes/$(ChromaRid)/native" Visible="false" />
+		<None Include="$(ChromaGuard)" Pack="true" PackagePath="runtimes/$(ChromaRid)/native" Visible="false" Condition="'$(ChromaRid)' != 'win-x64' And Exists('$(ChromaGuard)')" />
 		<None Include="$(ChromaBinaries)BUILD-INFO.txt" Condition="Exists('$(ChromaBinaries)BUILD-INFO.txt')" Pack="true" PackagePath="\" Visible="false" />
 		<None Include="$(MSBuildThisFileDirectory)LICENSE.txt" Pack="true" PackagePath="\" Visible="false" />
 		<None Include="$(MSBuildThisFileDirectory)..\..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" Visible="false" />
 	</ItemGroup>
 	<!-- .NET Framework does not copy runtimes/<rid>/native/ to the output: the targets of the package do it. -->
 	<ItemGroup Condition="'$(ChromaRid)' == 'win-x64'">
-		<None Include="$(MSBuildProjectDirectory)\ChromaDotNet.Local.Runtime.win-x64.targets" Pack="true" PackagePath="buildTransitive\" Visible="false" />
+		<None Include="$(MSBuildProjectDirectory)\ChromaDotNet.Local.Runtime.win-x64.targets" Pack="true" PackagePath="buildTransitive" Visible="false" />
 	</ItemGroup>
 	<!-- -p:AllowMissingBinaries=true packs a runtime package without its executable, only to try the other packages locally. -->
 	<Target Name="CheckChromaBinaries" BeforeTargets="GenerateNuspec" Condition="'$(AllowMissingBinaries)' != 'true'">
