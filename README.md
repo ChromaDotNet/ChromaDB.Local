@@ -23,6 +23,8 @@ var collection = await client.GetOrCreateCollectionAsync("docs");
 
 `chroma.Uri` is the address of the server, like `http://127.0.0.1:52817`, for `ChromaConfigurationOptions` or `AddChromaClient`.
 
+A sample that runs as it is: [samples/GettingStarted](https://github.com/ChromaDotNet/ChromaDB.Local/blob/main/samples/GettingStarted/Program.cs), with `dotnet run --project samples/GettingStarted`.
+
 ## Packages
 
 | Package | |
