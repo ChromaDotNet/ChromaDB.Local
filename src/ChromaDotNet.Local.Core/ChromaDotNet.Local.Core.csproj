@@ -8,7 +8,7 @@
 		<!-- The assembly and the namespace are those of ChromaDotNet.Local, the package most applications reference. -->
 		<AssemblyName>ChromaDotNet.Local</AssemblyName>
 		<RootNamespace>ChromaDotNet.Local</RootNamespace>
-		<PackageDescription>The code of ChromaDotNet.Local, without the Chroma executables: add the ChromaDotNet.Local.Runtime package of each platform the application runs on, or reference ChromaDotNet.Local, which brings them all. ChromaLocalServer.StartAsync starts Chroma $(ChromaVersion) as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. Community project, not affiliated with Chroma.</PackageDescription>
+		<PackageDescription>The code of ChromaDotNet.Local, without the Chroma executables. At the first start it downloads the executable of the platform from the GitHub release of ChromaDB.Local and checks its SHA-256. To work offline, add the ChromaDotNet.Local.Runtime package of each platform, or reference ChromaDotNet.Local, which brings them all. ChromaLocalServer.StartAsync starts Chroma $(ChromaVersion) as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. Community project, not affiliated with Chroma.</PackageDescription>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
