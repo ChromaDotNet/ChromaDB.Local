@@ -101,6 +101,16 @@ int main(int argc, char **argv)
 	/* Fails only when the guard already leads its group: nothing to do then. */
 	(void)setpgid(0, 0);
 
+	/* The signals stay blocked from the fork until the child has the default handlers: a SIGTERM that reaches the child before its
+	   exec then ends it, instead of going to the handler of the guard, which the child has until then. */
+	sigset_t handled, previous;
+	sigemptyset(&handled);
+	sigaddset(&handled, SIGCHLD);
+	sigaddset(&handled, SIGTERM);
+	sigaddset(&handled, SIGINT);
+	sigaddset(&handled, SIGHUP);
+	sigprocmask(SIG_BLOCK, &handled, &previous);
+
 	pid_t guard = getpid();
 	pid_t child = fork();
 	if (child < 0) {
@@ -120,6 +130,7 @@ int main(int argc, char **argv)
 		signal(SIGINT, SIG_DFL);
 		signal(SIGHUP, SIG_DFL);
 		signal(SIGPIPE, SIG_DFL);
+		sigprocmask(SIG_SETMASK, &previous, NULL);
 		close(signal_pipe[0]);
 		close(signal_pipe[1]);
 		/* The command does not keep the pipe of the parent. */
@@ -133,6 +144,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "chroma-local-guard: cannot start %s: %s\n", command[0], strerror(errno));
 		_exit(127);
 	}
+	sigprocmask(SIG_SETMASK, &previous, NULL);
 	fprintf(stderr, "chroma-local-guard: pid %ld\n", (long)child);
 	fflush(stderr);
 

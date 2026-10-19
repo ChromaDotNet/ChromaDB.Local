@@ -84,6 +84,16 @@ p.send_signal(signal.SIGTERM); code = finish(p)
 check("SIGTERM to the guard: exit code", code, 143)
 check("SIGTERM to the guard: child gone", alive(child), False)
 
+# 3b. SIGTERM right after the line with the pid, when the child may not have reached its exec: it must still end with SIGTERM, not
+# with the SIGKILL after the grace time.
+late = []
+for attempt in range(50):
+    p, child = start("--grace-ms", "3000", "--", "sleep", "100")
+    t0 = time.monotonic(); p.send_signal(signal.SIGTERM); code = finish(p)
+    if code != 143 or time.monotonic() - t0 > 2:
+        late.append((attempt, code, round(time.monotonic() - t0, 2)))
+check("SIGTERM at once, 50 times: always 143 within 2 s", late, [])
+
 # 4. The guard killed with SIGKILL: on Linux the child gets SIGKILL too.
 p, child = start("--", "sleep", "100")
 p.kill(); finish(p)
