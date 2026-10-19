@@ -16,7 +16,15 @@ if (mode == "bench")
 var stopwatch = Stopwatch.StartNew();
 // CHROMA_LOCAL_TRACE=1 writes each line of the log of Chroma with the milliseconds since the start.
 var logger = Environment.GetEnvironmentVariable("CHROMA_LOCAL_TRACE") == "1" ? new TraceLogger(stopwatch) : null;
-var chroma = await ChromaLocalServer.StartAsync(new ChromaLocalOptions { DataPath = dataPath, Logger = logger });
+// The options of the download, for the tests that use ChromaDotNet.Local.Core without a runtime package.
+var options = new ChromaLocalOptions { DataPath = dataPath, Logger = logger };
+if (Environment.GetEnvironmentVariable("CHROMA_LOCAL_DOWNLOAD_URI") is { Length: > 0 } downloadUri)
+	options.DownloadUri = new Uri(downloadUri);
+if (Environment.GetEnvironmentVariable("CHROMA_LOCAL_CACHE") is { Length: > 0 } cache)
+	options.CacheDirectory = cache;
+if (Environment.GetEnvironmentVariable("CHROMA_LOCAL_NO_DOWNLOAD") == "1")
+	options.DownloadExecutable = false;
+var chroma = await ChromaLocalServer.StartAsync(options);
 var started = stopwatch.ElapsedMilliseconds;
 
 if (mode == "serve")

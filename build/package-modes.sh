@@ -2,7 +2,8 @@
 # Usage: build/package-modes.sh. The two ways to reference the package, with the test host:
 #   core-rid: ChromaDotNet.Local.Core and the runtime package of this machine only; Chroma starts, and the output has only the
 #             executables of this platform;
-#   core:     ChromaDotNet.Local.Core alone; the start fails with the message that names the packages.
+#   core:     ChromaDotNet.Local.Core alone, with the download turned off; the start fails with the message that names the packages.
+#             build/download-tests.sh then uses this build for the download.
 # The way with everything, ChromaDotNet.Local, is the one of the tests and of the suite of the client.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -20,7 +21,9 @@ for mode in core-rid core; do
   (cd "$out" && dotnet build -c Release -f net8.0 -v q -nologo -o bin -p:LocalPackages=$mode -p:ChromaDotNetLocalVersion=$version \
     -p:ImplicitUsings=enable -p:Nullable=enable -p:LangVersion=latest "-p:RestorePackagesPath=$root/artifacts/nuget-cache" 2>&1 \
     | grep -E " error |warning" || true)
+  if [ "$mode" = core ]; then export CHROMA_LOCAL_NO_DOWNLOAD=1; else unset CHROMA_LOCAL_NO_DOWNLOAD; fi
   run=$(dotnet "$out/bin/ChromaDotNet.Local.TestHost.dll" smoke 2>&1); code=$?
+  unset CHROMA_LOCAL_NO_DOWNLOAD
   natives=$(cd "$out/bin" && find . -name 'chroma' -o -name 'chroma.exe' | sort | tr '\n' ' ')
   echo "== $mode: exit $code; executables: ${natives:-none}"
   echo "$run" | head -3

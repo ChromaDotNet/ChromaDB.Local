@@ -10,7 +10,7 @@
 		<!-- NU5128: no lib folder, on purpose. -->
 		<NoWarn>$(NoWarn);NU5128</NoWarn>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageDescription>Chroma $(ChromaVersion) on this machine, without Docker and without Python, for ChromaDotNet.Client: ChromaLocalServer.StartAsync starts the official Chroma executable as a child process on 127.0.0.1, and stops it with Dispose or when the application ends. With the executables for Windows x64, Linux x64 and arm64 (glibc 2.28 and later), macOS x64 and arm64; for one platform only, ChromaDotNet.Local.Core and the ChromaDotNet.Local.Runtime package of that platform. Community project, not affiliated with Chroma.</PackageDescription>
+		<PackageDescription>Chroma $(ChromaVersion) on this machine, without Docker and without Python, for ChromaDotNet.Client: ChromaLocalServer.StartAsync starts the executable of the Chroma CLI as a child process on 127.0.0.1, and stops it with Dispose or when the application ends. With the executables for Windows x64, Linux x64 and arm64 (glibc 2.28 and later), macOS x64 and arm64; for one platform only, ChromaDotNet.Local.Core and the ChromaDotNet.Local.Runtime package of that platform. Community project, not affiliated with Chroma.</PackageDescription>
 	</PropertyGroup>
 	<ItemGroup>
 		<!-- build/pack.sh packs these first, into artifacts/packages. -->

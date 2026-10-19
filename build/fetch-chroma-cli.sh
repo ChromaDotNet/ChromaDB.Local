@@ -1,6 +1,6 @@
 #!/bin/bash
-# Downloads the official binaries of the Chroma CLI for Windows and macOS from the GitHub release, and checks each against the
-# SHA-256 digest GitHub publishes for the asset. Output in artifacts/official/<rid>/.
+# Downloads the binaries of the Chroma CLI for Windows and macOS from the GitHub release, and checks each against the
+# SHA-256 digest GitHub publishes for the asset. Output in artifacts/chroma-cli/<rid>/.
 set -euo pipefail
 CLI_TAG=${CLI_TAG:-cli-1.4.4}
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -14,7 +14,7 @@ release=$(curl -sSfL -H 'Accept: application/vnd.github+json' "${auth[@]}" "$api
 
 fetch() {
   local asset=$1 rid=$2 file=$3
-  local out="$root/artifacts/official/$rid"
+  local out="$root/artifacts/chroma-cli/$rid"
   mkdir -p "$out"
   local digest url
   digest=$(printf '%s' "$release" | "$py" -c "import sys,json; print(next(a['digest'] for a in json.load(sys.stdin)['assets'] if a['name']=='$asset'))")

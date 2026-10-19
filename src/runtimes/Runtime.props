@@ -32,7 +32,7 @@
 	</ItemGroup>
 	<!-- -p:AllowMissingBinaries=true packs a runtime package without its executable, only to try the other packages locally. -->
 	<Target Name="CheckChromaBinaries" BeforeTargets="GenerateNuspec" Condition="'$(AllowMissingBinaries)' != 'true'">
-		<Error Condition="!Exists('$(ChromaBinaries)$(ChromaExe)')" Text="Missing $(ChromaBinaries)$(ChromaExe): run build/fetch-official.sh or build/build-linux-docker.sh." />
+		<Error Condition="!Exists('$(ChromaBinaries)$(ChromaExe)')" Text="Missing $(ChromaBinaries)$(ChromaExe): run build/fetch-chroma-cli.sh or build/build-linux-docker.sh." />
 		<Error Condition="'$(ChromaRid)' != 'win-x64' And !Exists('$(ChromaGuard)')" Text="Missing $(ChromaGuard): run the build of the guard." />
 	</Target>
 </Project>

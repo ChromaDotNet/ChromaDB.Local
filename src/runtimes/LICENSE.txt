@@ -2,7 +2,7 @@ This package contains:
 
 - chroma (chroma.exe on Windows): the executable of the Chroma CLI, tag cli-1.4.4 of https://github.com/chroma-core/chroma
   (commit 11f3c7435e71024aa0a2b53710a28d3289d922d1), Chroma 1.5.9. Copyright Chroma. Licensed under the Apache License 2.0,
-  below. On Windows and macOS it is the official executable of the GitHub release, unchanged. On Linux it is built from that tag
+  below. On Windows and macOS it is the executable of the GitHub release, unchanged. On Linux it is built from that tag
   with no change to the source code, with the release profile of the repository and these settings of the environment:
   CARGO_PROFILE_RELEASE_DEBUG=0 and CARGO_PROFILE_RELEASE_STRIP=symbols. BUILD-INFO.txt says how this file was made.
   The executable contains crates under their own licenses: THIRD-PARTY-NOTICES.md lists them with their texts.

@@ -8,7 +8,8 @@ dotnet build-server shutdown >/dev/null 2>&1 || true
 rm -f artifacts/packages/ChromaDotNet.Local*.nupkg artifacts/packages/ChromaDotNet.Local*.snupkg
 rm -rf artifacts/nuget-cache/chromadotnet.local*
 for project in src/runtimes/*/ChromaDotNet.Local.Runtime.*.csproj src/ChromaDotNet.Local.Core/ChromaDotNet.Local.Core.csproj src/ChromaDotNet.Local/ChromaDotNet.Local.csproj; do
-  if ! output=$(dotnet pack "$project" -c Release --nologo -v q "$@" 2>&1); then
+  # Core has the hash of every executable, for the download: all of them must be there.
+  if ! output=$(dotnet pack "$project" -c Release --nologo -v q -p:RequireExecutableHashes=true "$@" 2>&1); then
     echo "$output" | grep -E "error|warning" >&2
     echo "pack failed: $project" >&2
     exit 1

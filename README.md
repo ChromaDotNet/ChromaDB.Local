@@ -1,12 +1,12 @@
 # ChromaDotNet.Local
 
 Chroma on this machine, without Docker and without Python, for [ChromaDotNet.Client](https://www.nuget.org/packages/ChromaDotNet.Client).
-`ChromaLocalServer.StartAsync` starts the official Chroma executable as a child process on 127.0.0.1, waits until it answers, and
+`ChromaLocalServer.StartAsync` starts the executable of the Chroma CLI as a child process on 127.0.0.1, waits until it answers, and
 stops it with `Dispose` or when the application ends.
 
 Community project, not affiliated with Chroma.
 
-> Preview. The packages are not on NuGet yet: each run of the CI leaves them in its artifacts, as `packages`.
+> Preview: the API and the packages can still change.
 
 ```
 dotnet add package ChromaDotNet.Local --prerelease
@@ -27,20 +27,44 @@ A sample that runs as it is: [samples/GettingStarted](https://github.com/ChromaD
 
 ## Packages
 
-| Package | |
-|---|---|
-| `ChromaDotNet.Local` | Everything: `ChromaDotNet.Local.Core` and the runtime packages of the five platforms. Works offline, on any of them. |
-| `ChromaDotNet.Local.Core` | The code, without the executables: add the runtime packages of the platforms the application runs on. |
-| `ChromaDotNet.Local.Runtime.<rid>` | The Chroma executable of one platform: `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`. |
+There are three ways to get the Chroma executable, all with the same code and the same API:
 
-The same split as Microsoft.ML.OnnxRuntime and Microsoft.ML.OnnxRuntime.Managed, or the bundles of SQLitePCLRaw. For one platform:
+| Reference | Executables | Network |
+|---|---|---|
+| [ChromaDotNet.Local](https://www.nuget.org/packages/ChromaDotNet.Local) | the five platforms, in the package | none |
+| [ChromaDotNet.Local.Core](https://www.nuget.org/packages/ChromaDotNet.Local.Core) and `ChromaDotNet.Local.Runtime.<rid>` | the platforms you add | none |
+| [ChromaDotNet.Local.Core](https://www.nuget.org/packages/ChromaDotNet.Local.Core) alone | downloaded at the first start | the first start |
+
+`ChromaDotNet.Local` has no code of its own: it brings `ChromaDotNet.Local.Core` and the five runtime packages, as
+Microsoft.ML.OnnxRuntime and the bundles of SQLitePCLRaw do. The runtime packages are
+[win-x64](https://www.nuget.org/packages/ChromaDotNet.Local.Runtime.win-x64),
+[linux-x64](https://www.nuget.org/packages/ChromaDotNet.Local.Runtime.linux-x64),
+[linux-arm64](https://www.nuget.org/packages/ChromaDotNet.Local.Runtime.linux-arm64),
+[osx-x64](https://www.nuget.org/packages/ChromaDotNet.Local.Runtime.osx-x64) and
+[osx-arm64](https://www.nuget.org/packages/ChromaDotNet.Local.Runtime.osx-arm64). For one platform:
 
 ```
 dotnet add package ChromaDotNet.Local.Core --prerelease
 dotnet add package ChromaDotNet.Local.Runtime.linux-x64 --prerelease
 ```
 
-An application published for one platform (`-r linux-x64`) gets only the executable of that platform, with either way.
+An application published for one platform (`-r linux-x64`) gets only the executable of that platform.
+
+### The download at the first start
+
+With `ChromaDotNet.Local.Core` and no runtime package for the platform, the first start downloads the executable from the
+[GitHub release](https://github.com/ChromaDotNet/ChromaDB.Local/releases) of the same version, about 20 MB, and keeps it in a
+directory of the user. `ChromaDotNet.Local.Core` has the SHA-256 hash of each executable: it checks the file after the download and
+before each start, and does not keep a file with another hash. Two processes that start at the same time download it once.
+
+| `ChromaLocalOptions` | Default | |
+|---|---|---|
+| `DownloadExecutable` | `true` | `false` turns the download off: then a runtime package or `ExecutablePath` is needed. |
+| `CacheDirectory` | `%LOCALAPPDATA%\ChromaDotNet.Local`, `~/Library/Caches/ChromaDotNet.Local`, `~/.cache/chromadotnet-local` | Where the executables go. |
+| `DownloadUri` | the GitHub release | A mirror with the files of the release, like `https://mirror.example/chromadotnet-local/v1.5.9.1-preview.3/`. |
+
+Without the network and without the file in the cache, the start throws an `InvalidOperationException` that says where it looked
+and what to add. The files of each release come with `SHA256SUMS`, Sigstore signatures and build provenance.
 
 ## Options
 
@@ -70,9 +94,9 @@ or is killed:
 
 | Runtime package | Chroma executable |
 |---|---|
-| `ChromaDotNet.Local.Runtime.win-x64` | official, from the GitHub release of the Chroma CLI, hash checked |
-| `ChromaDotNet.Local.Runtime.osx-arm64` | official, hash checked |
-| `ChromaDotNet.Local.Runtime.osx-x64` | official, hash checked |
+| `ChromaDotNet.Local.Runtime.win-x64` | from the GitHub release of the Chroma CLI, hash checked |
+| `ChromaDotNet.Local.Runtime.osx-arm64` | from the GitHub release of the Chroma CLI, hash checked |
+| `ChromaDotNet.Local.Runtime.osx-x64` | from the GitHub release of the Chroma CLI, hash checked |
 | `ChromaDotNet.Local.Runtime.linux-x64` | built from the tag of the Chroma CLI, with no change to the code, for glibc 2.28 and later |
 | `ChromaDotNet.Local.Runtime.linux-arm64` | built from the tag, as linux-x64 |
 
@@ -94,7 +118,7 @@ which `build/third-party-notices.sh` writes before the pack.
 
 ## Build
 
-- `build/fetch-official.sh`: the official executables of Windows and macOS, checked against the digests of the GitHub release.
+- `build/fetch-chroma-cli.sh`: the executables of Windows and macOS of the GitHub release of the Chroma CLI, checked against its digests.
 - `build/build-linux-docker.sh x64|arm64`: the Linux executables and the guard, in manylinux_2_28. Two builds of the same tag give
   the same bytes.
 - `build/build-guard-macos.sh`: the guard for macOS, with zig.

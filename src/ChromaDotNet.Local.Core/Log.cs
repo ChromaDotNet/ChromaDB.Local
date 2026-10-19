@@ -16,4 +16,10 @@ internal static partial class Log
 
 	[LoggerMessage(EventId = 4, Level = LogLevel.Warning, Message = "chroma-local-guard did not end within {Seconds} s: killing it and Chroma.")]
 	public static partial void GuardDidNotEnd(ILogger logger, double seconds);
+
+	[LoggerMessage(EventId = 5, Level = LogLevel.Information, Message = "Downloading the Chroma executable from {Uri}.")]
+	public static partial void Downloading(ILogger logger, Uri uri);
+
+	[LoggerMessage(EventId = 6, Level = LogLevel.Information, Message = "Downloaded {Path}, {Length} bytes, in {Milliseconds} ms; its SHA-256 hash matches.")]
+	public static partial void Downloaded(ILogger logger, string path, long length, long milliseconds);
 }

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace ChromaDotNet.Local;
 
 /// <summary>
-/// A Chroma server on this machine: the official Chroma executable, started as a child process on 127.0.0.1, with the data in a
+/// A Chroma server on this machine: the executable of the Chroma CLI, started as a child process on 127.0.0.1, with the data in a
 /// directory. It stops with <see cref="StopAsync(CancellationToken)"/>, <see cref="DisposeAsync"/> or <see cref="Dispose"/>, and when
 /// this process ends, also when it is killed: on Windows through a job object, on Linux and macOS through a small guard process.
 /// </summary>
@@ -102,7 +102,7 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		if (options.Port is < 1 or > 65535)
 			throw new ArgumentOutOfRangeException(nameof(options), "Port must be from 1 to 65535.");
 
-		var binaries = ChromaLocalBinaries.Resolve(options.ExecutablePath);
+		var binaries = await ChromaLocalBinaries.ResolveAsync(options, cancellationToken).ConfigureAwait(false);
 		var deleteDataPath = options.DataPath is null;
 		var dataPath = deleteDataPath
 			? Path.Combine(Path.GetTempPath(), "chromadotnet-local-" + Guid.NewGuid().ToString("N"))

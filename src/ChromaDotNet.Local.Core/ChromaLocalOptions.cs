@@ -41,4 +41,27 @@ public sealed class ChromaLocalOptions
 	/// executable of another version of Chroma, or for a platform without a runtime package.
 	/// </summary>
 	public string? ExecutablePath { get; set; }
+
+	/// <summary>
+	/// Whether the start downloads the Chroma executable when no <c>ChromaDotNet.Local.Runtime</c> package has the one of this
+	/// platform: from the GitHub release of this version of ChromaDotNet.Local, or from <see cref="DownloadUri"/>, into
+	/// <see cref="CacheDirectory"/>. The file is checked against the SHA-256 hash in this package after the download and before each
+	/// start. <see langword="true"/> by default; with <see langword="false"/> the start needs a runtime package or
+	/// <see cref="ExecutablePath"/>.
+	/// </summary>
+	public bool DownloadExecutable { get; set; } = true;
+
+	/// <summary>
+	/// The directory of the downloaded executables. When it is <see langword="null"/>, the default, a directory of the user:
+	/// <c>%LOCALAPPDATA%\ChromaDotNet.Local</c> on Windows, <c>~/Library/Caches/ChromaDotNet.Local</c> on macOS,
+	/// <c>$XDG_CACHE_HOME/chromadotnet-local</c> or <c>~/.cache/chromadotnet-local</c> on Linux.
+	/// </summary>
+	public string? CacheDirectory { get; set; }
+
+	/// <summary>
+	/// The address the executables are downloaded from, like a mirror: the files of the release are taken by their names under it,
+	/// like <c>chroma-linux-x64.gz</c>. When it is <see langword="null"/>, the default, the GitHub release of this version of
+	/// ChromaDotNet.Local. The hash in this package is checked anyway.
+	/// </summary>
+	public Uri? DownloadUri { get; set; }
 }

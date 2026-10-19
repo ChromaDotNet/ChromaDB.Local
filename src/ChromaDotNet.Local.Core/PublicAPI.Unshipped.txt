@@ -1,8 +1,14 @@
 #nullable enable
 ChromaDotNet.Local.ChromaLocalOptions
 ChromaDotNet.Local.ChromaLocalOptions.ChromaLocalOptions() -> void
+ChromaDotNet.Local.ChromaLocalOptions.CacheDirectory.get -> string?
+ChromaDotNet.Local.ChromaLocalOptions.CacheDirectory.set -> void
 ChromaDotNet.Local.ChromaLocalOptions.DataPath.get -> string?
 ChromaDotNet.Local.ChromaLocalOptions.DataPath.set -> void
+ChromaDotNet.Local.ChromaLocalOptions.DownloadExecutable.get -> bool
+ChromaDotNet.Local.ChromaLocalOptions.DownloadExecutable.set -> void
+ChromaDotNet.Local.ChromaLocalOptions.DownloadUri.get -> System.Uri?
+ChromaDotNet.Local.ChromaLocalOptions.DownloadUri.set -> void
 ChromaDotNet.Local.ChromaLocalOptions.ExecutablePath.get -> string?
 ChromaDotNet.Local.ChromaLocalOptions.ExecutablePath.set -> void
 ChromaDotNet.Local.ChromaLocalOptions.Logger.get -> Microsoft.Extensions.Logging.ILogger?

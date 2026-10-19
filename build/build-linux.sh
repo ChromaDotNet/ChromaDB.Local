@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds the official Chroma CLI from its tag, with no change to the code, on manylinux_2_28 (AlmaLinux 8, glibc 2.28), in release
+# Builds the Chroma CLI from its tag, with no change to the code, on manylinux_2_28 (AlmaLinux 8, glibc 2.28), in release
 # without debug info, and the guard next to it. Runs inside quay.io/pypa/manylinux_2_28_x86_64 or quay.io/pypa/manylinux_2_28_aarch64:
 # see build-linux.ps1, which starts the container. Output in /out/<rid>/: chroma, chroma-local-guard, BUILD-INFO.txt.
 set -euo pipefail
@@ -45,7 +45,7 @@ commit_time=$(git log -1 --format=%ct)
 git ls-files -z | xargs -0 touch -h -d "@$commit_time"
 export SOURCE_DATE_EPOCH=$commit_time
 
-# The release profile of the workspace has debug = 2, which makes the official Linux binary 510 MB: the environment overrides it,
+# The release profile of the workspace has debug = 2, which makes the Linux binary of the release of Chroma 510 MB: the environment overrides it,
 # with no change to the code. The toolchain is the one of rust-toolchain.toml at the tag.
 export CARGO_PROFILE_RELEASE_DEBUG=0 CARGO_PROFILE_RELEASE_STRIP=symbols CARGO_TARGET_DIR=/target
 start=$(date +%s)

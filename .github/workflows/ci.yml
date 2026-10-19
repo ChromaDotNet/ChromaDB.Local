@@ -1,11 +1,13 @@
-# Builds the Linux executables on runners of their own architecture, takes the official ones of Windows and macOS, packs, and runs
-# on each platform the tests of the package, the two ways to reference it, the tests of the guard and the suite of the client.
-# It publishes nothing: the packages stay in the artifacts of the run.
+# Builds the Linux executables on runners of their own architecture, takes those of Windows and macOS from the release of the Chroma CLI, packs, and runs
+# on each platform the tests of the package, the ways to reference it, the download at the first start, the tests of the guard and
+# the suite of the client. A version tag, like v1.5.9.1-preview.3, also publishes: the GitHub release with the executables, their
+# Sigstore signatures and build provenance, then the packages on NuGet, with trusted publishing, in the environment nuget.
 name: CI
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -14,7 +16,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
 
 jobs:
   linux-executables:
@@ -45,28 +47,28 @@ jobs:
           name: third-party-notices
           path: THIRD-PARTY-NOTICES.md
 
-  official-and-guard:
-    name: Official executables and the macOS guard
+  chroma-cli-and-guard:
+    name: Chroma CLI executables and the macOS guard
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - name: Official executables of Windows and macOS, checked against the digests of the release
+      - name: Executables of Windows and macOS of the Chroma CLI, checked against the digests of its release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash build/fetch-official.sh
+        run: bash build/fetch-chroma-cli.sh
       - name: Guard for macOS
         run: bash build/build-guard-macos.sh
       - uses: actions/upload-artifact@v7
         with:
-          name: official-and-guard
+          name: chroma-cli-and-guard
           path: |
-            artifacts/official
+            artifacts/chroma-cli
             artifacts/guard
 
   pack:
     name: Pack
-    needs: [linux-executables, official-and-guard]
+    needs: [linux-executables, chroma-cli-and-guard]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -79,17 +81,30 @@ jobs:
           mkdir -p artifacts/linux
           cp -r artifacts/download/linux-x64/. artifacts/linux/
           cp -r artifacts/download/linux-arm64/. artifacts/linux/
-          cp -r artifacts/download/official-and-guard/. artifacts/
+          cp -r artifacts/download/chroma-cli-and-guard/. artifacts/
           cp artifacts/download/third-party-notices/THIRD-PARTY-NOTICES.md .
-          find artifacts/linux artifacts/official artifacts/guard -type f | sort
+          find artifacts/linux artifacts/chroma-cli artifacts/guard -type f | sort
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+      - name: The tag is the version of the packages, a preview
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(dotnet msbuild src/ChromaDotNet.Local.Core -getProperty:Version -nologo)
+          echo "tag $GITHUB_REF_NAME, version $version"
+          test "$GITHUB_REF_NAME" = "v$version"
+          case "$version" in *-preview*) ;; *) echo "only previews for now" >&2; exit 1 ;; esac
       - run: bash build/pack.sh
+      - name: Files of the release
+        run: bash build/release-assets.sh
       - uses: actions/upload-artifact@v7
         with:
           name: packages
           path: artifacts/packages
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: artifacts/release
 
   test:
     name: Tests on ${{ matrix.runner }}
@@ -109,6 +124,10 @@ jobs:
         with:
           name: packages
           path: artifacts/packages
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: artifacts/release
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
@@ -128,8 +147,11 @@ jobs:
           echo "guard: $guard"
           chmod +x "$guard"
           python3 guard/test_guard.py "$guard"
-      - name: The two ways to reference the package
+      - name: The ways to reference the package
         run: bash build/package-modes.sh
+      - name: The download at the first start
+        timeout-minutes: 10
+        run: bash build/download-tests.sh
       - name: Suite of the client against ChromaDotNet.Local
         run: SUITE_LOG=suite.log bash build/client-suite.sh
       - uses: actions/upload-artifact@v7
@@ -138,3 +160,80 @@ jobs:
           name: logs-${{ matrix.runner }}
           path: suite.log
           if-no-files-found: ignore
+
+  publish:
+    name: Publish the preview
+    needs: [pack, test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: nuget
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: packages
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: release
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            packages/*.nupkg
+            release/*.gz
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Sign and collect the provenance
+        run: |
+          for file in release/*.gz release/SHA256SUMS packages/*.nupkg; do
+            cosign sign-blob --yes --bundle "$file.sigstore.json" "$file"
+          done
+          for file in release/*.gz packages/*.nupkg; do
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/ci.yml" \
+              --source-ref "refs/tags/$TAG" --format json --jq '.[].attestation.bundle' >> bundles.jsonl
+          done
+          sort -u bundles.jsonl > "release/provenance-$TAG.intoto.jsonl"
+          cp packages/*.nupkg packages/*.nupkg.sigstore.json release/
+
+      - name: GitHub release
+        run: |
+          version="${TAG#v}"
+          chroma=$(dotnet msbuild src/ChromaDotNet.Local.Core -getProperty:ChromaVersion -nologo)
+          cli=$(dotnet msbuild src/ChromaDotNet.Local.Core -getProperty:ChromaCliTag -nologo)
+          sed -e "s/VERSION/$version/g" -e "s/CHROMA_VERSION/$chroma/g" -e "s/CLI_TAG/$cli/g" build/release-notes.md > notes.md
+          gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
+            --title "ChromaDotNet.Local $version" --notes-file notes.md
+
+      - name: The release serves the files the packages expect
+        run: |
+          mkdir check && cd check
+          for file in ../release/*.gz ../release/SHA256SUMS; do
+            name=$(basename "$file")
+            curl -fsSL -o "$name" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$name"
+          done
+          sha256sum -c SHA256SUMS
+
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
+      - name: Publish to NuGet.org
+        run: dotnet nuget push 'packages/*.nupkg' --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
