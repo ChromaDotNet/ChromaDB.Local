@@ -12,6 +12,7 @@ public sealed class ChromaLocalOptions
 	/// Chroma keeps its data in a new temporary directory, deleted when the server stops; when the application is killed before, a
 	/// later start with temporary data deletes it.
 	/// One server at a time on a directory: a second start on it throws an <see cref="InvalidOperationException"/>.
+	/// On Windows Chroma works with a full path of at most 206 characters, and a longer one throws a <see cref="PathTooLongException"/>.
 	/// </summary>
 	public string? DataPath { get; set; }
 

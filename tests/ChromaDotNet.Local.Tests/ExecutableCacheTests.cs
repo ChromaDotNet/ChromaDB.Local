@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using NUnit.Framework;
 
 namespace ChromaDotNet.Local.Tests;
@@ -56,6 +59,67 @@ public class ExecutableCacheTests
 		var e = Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
 		Assert.That(e, Is.TypeOf<IOException>(), e!.ToString());
 		Assert.That(e.Message, Does.Contain(file));
+	}
+
+	// The temporary files of downloads that an application killed during the download left: deleted by the next process that takes
+	// the lock, and only those.
+	[Test]
+	public void LeftoversOfInterruptedDownloadsAreDeleted()
+	{
+		var directory = Path.Combine(_root, ExecutableCache.ReleaseTag, ExecutableCacheTestRid());
+		Directory.CreateDirectory(directory);
+		var leftover = Path.Combine(directory, "chroma." + Guid.NewGuid().ToString("N") + ".tmp");
+		var other = Path.Combine(directory, "notes.tmp");
+		File.WriteAllText(leftover, "partial");
+		File.WriteAllText(other, "");
+		var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadExecutable = false };
+		Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
+		Assert.That(File.Exists(leftover), Is.False, "leftover of a download");
+		Assert.That(File.Exists(other), Is.True, "another file");
+	}
+
+	// A directory where the executable goes: an error that names it and says what to do.
+	[Test]
+	public void DirectoryInPlaceOfTheExecutable()
+	{
+		var directory = Path.Combine(_root, ExecutableCache.ReleaseTag, ExecutableCacheTestRid(), "chroma");
+		Directory.CreateDirectory(directory);
+		var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadUri = new Uri("http://127.0.0.1:1/") };
+		var e = Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
+		Assert.That(e, Is.TypeOf<IOException>(), e!.ToString());
+		Assert.That(e.Message, Does.Contain(directory).And.Contain("delete it"));
+	}
+
+	// A download that fails with an error whose message ends with a period, here a file that is not gzip: one period, not two.
+	[Test]
+	public async Task DownloadErrorWithOnePeriod()
+	{
+		var listener = new TcpListener(IPAddress.Loopback, 0);
+		listener.Start();
+		try
+		{
+			var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+			var serve = Task.Run(async () =>
+			{
+				using var client = await listener.AcceptTcpClientAsync();
+				var stream = client.GetStream();
+				var request = new byte[4096];
+				var received = "";
+				while (!received.Contains("\r\n\r\n", StringComparison.Ordinal))
+					received += Encoding.ASCII.GetString(request, 0, await stream.ReadAsync(request));
+				await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Length: 16\r\nConnection: close\r\n\r\nthis is not gzip"));
+			});
+			var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadUri = new Uri($"http://127.0.0.1:{port}/") };
+			var e = Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
+			await serve;
+			Assert.That(e, Is.TypeOf<InvalidOperationException>(), e!.ToString());
+			Assert.That(e.InnerException!.Message, Does.EndWith("."), "the case of the test");
+			Assert.That(e.Message, Does.Contain(e.InnerException.Message).And.Not.Contain(".."));
+		}
+		finally
+		{
+			listener.Stop();
+		}
 	}
 
 	// A platform this build has hashes for, as the package is built with all of them.

@@ -89,7 +89,7 @@ and build provenance for each of them and for each package.
 
 | `ChromaLocalOptions` | Default | |
 |---|---|---|
-| `DataPath` | a new temporary directory | Where Chroma keeps its data. The temporary directory is deleted at the stop; when the application is killed before, a later start with temporary data deletes it. |
+| `DataPath` | a new temporary directory | Where Chroma keeps its data. The temporary directory is deleted at the stop; when the application is killed before, a later start with temporary data deletes it. On Windows, at most 206 characters. |
 | `Port` | a free port | The port on 127.0.0.1. |
 | `StartupTimeout` | 30 s | How long the start waits for `/api/v2/heartbeat`. |
 | `ShutdownTimeout` | 5 s | Linux and macOS: how long the stop waits after SIGTERM, before SIGKILL. |

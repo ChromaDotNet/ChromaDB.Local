@@ -65,8 +65,11 @@ internal static class ExecutableCache
 
 		using (await LockAsync(Path.Combine(directory, ".lock"), cancellationToken).ConfigureAwait(false))
 		{
+			DeleteLeftovers(directory, names);
 			for (var i = 0; i < names.Length; i++)
 			{
+				if (Directory.Exists(paths[i]))
+					throw new IOException($"{paths[i]} is a directory, not the file {names[i]} of the cache: delete it, or set ChromaLocalOptions.CacheDirectory to another directory.");
 				if (File.Exists(paths[i]) && string.Equals(await HashFileAsync(paths[i], cancellationToken).ConfigureAwait(false), hashes[i], StringComparison.OrdinalIgnoreCase))
 				{
 					Platform.TryMakeExecutable(paths[i]);
@@ -139,7 +142,7 @@ internal static class ExecutableCache
 			catch (Exception e) when (e is HttpRequestException || e is IOException || e is InvalidDataException || (e is TaskCanceledException && !cancellationToken.IsCancellationRequested))
 			{
 				throw new InvalidOperationException(
-					$"Could not download the Chroma executable for {rid} from {uri}: {e.Message}. Without the network: reference ChromaDotNet.Local, " +
+					$"Could not download the Chroma executable for {rid} from {uri}: {Sentence(e.Message)} Without the network: reference ChromaDotNet.Local, " +
 					$"or ChromaDotNet.Local.Runtime.{rid}, which have the executable; or set DownloadUri to a mirror with the files of the release " +
 					$"{ReleaseTag}, or ExecutablePath to an executable.", e);
 			}
@@ -194,6 +197,38 @@ internal static class ExecutableCache
 		return ToHex(sha.GetHashAndReset());
 	}
 
+	// The temporary files of downloads and copies that did not end, as when the application was killed during one: <name>.<32 hex
+	// digits>.tmp. Under the lock no other process writes them. Best effort: a file that cannot be deleted stays.
+	private static void DeleteLeftovers(string directory, string[] names)
+	{
+		foreach (var name in names)
+		{
+			List<string> files;
+			try
+			{
+				files = Directory.EnumerateFiles(directory, name + ".*.tmp").ToList();
+			}
+			catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+			{
+				continue;
+			}
+			foreach (var file in files)
+			{
+				var fileName = Path.GetFileName(file);
+				var id = fileName.Substring(name.Length + 1, fileName.Length - name.Length - 1 - ".tmp".Length);
+				if (id.Length != 32 || !id.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))
+					continue;
+				try
+				{
+					File.Delete(file);
+				}
+				catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+				{
+				}
+			}
+		}
+	}
+
 	// The lock file stays: deleted, a process could lock the old file while another creates a new one. The open is tried again only
 	// while another process holds the file; any other error ends the start at once.
 	internal static async Task<FileStream> LockAsync(string path, CancellationToken cancellationToken)
@@ -204,7 +239,7 @@ internal static class ExecutableCache
 			{
 				return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 			}
-			catch (IOException e) when (IsHeldByAnotherProcess(e))
+			catch (IOException e) when (Platform.IsHeldByAnotherProcess(e))
 			{
 				await Task.Delay(100, cancellationToken).ConfigureAwait(false);
 			}
@@ -215,19 +250,11 @@ internal static class ExecutableCache
 		}
 	}
 
-	// Windows: ERROR_SHARING_VIOLATION or ERROR_LOCK_VIOLATION. Linux and macOS: flock fails with EWOULDBLOCK, which .NET puts in
-	// HResult as it is, 11 on Linux and 35 on macOS.
-	private static bool IsHeldByAnotherProcess(IOException e)
-	{
-		if (e.GetType() != typeof(IOException))
-			return false;
-		if (Platform.IsWindows)
-			return (e.HResult & 0xFFFF) is 32 or 33;
-		return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? e.HResult == 35 : e.HResult == 11;
-	}
-
 	private static IOException CacheError(string directory, Exception e) =>
-		new($"Cannot use {directory} for the Chroma executables: {e.Message} Set ChromaLocalOptions.CacheDirectory to another directory, or reference a ChromaDotNet.Local.Runtime package.", e);
+		new($"Cannot use {directory} for the Chroma executables: {Sentence(e.Message)} Set ChromaLocalOptions.CacheDirectory to another directory, or reference a ChromaDotNet.Local.Runtime package.", e);
+
+	// A message as a sentence, with one period at the end: those of .NET Framework have one, some of .NET do not.
+	private static string Sentence(string message) => message.Length > 0 && message[message.Length - 1] == '.' ? message : message + ".";
 
 #if NET
 	private static ValueTask<int> ReadAsync(Stream stream, byte[] buffer, CancellationToken cancellationToken) =>
