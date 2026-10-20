@@ -4,3 +4,4 @@ artifacts/
 *.user
 .vs/
 THIRD-PARTY-NOTICES.md
+chroma-data/
