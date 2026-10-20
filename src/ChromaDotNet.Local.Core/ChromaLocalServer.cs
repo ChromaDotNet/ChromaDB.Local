@@ -272,6 +272,8 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		timeoutSource.CancelAfter(timeout);
 		var token = timeoutSource.Token;
+		// The timer of CancelAfter can fire late on a busy machine: an answer that comes after the timeout is a timeout all the same.
+		var elapsed = Stopwatch.StartNew();
 		try
 		{
 			if (_guarded && !Platform.IsWindows)
@@ -286,7 +288,11 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 				{
 					using var response = await http.GetAsync(heartbeat, token).ConfigureAwait(false);
 					if (response.IsSuccessStatusCode)
+					{
+						if (elapsed.Elapsed > timeout)
+							throw new OperationCanceledException(token);
 						return;
+					}
 				}
 				catch (HttpRequestException)
 				{
