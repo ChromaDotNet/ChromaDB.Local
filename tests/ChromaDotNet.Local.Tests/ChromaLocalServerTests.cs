@@ -146,6 +146,31 @@ public class ChromaLocalServerTests
 		}
 	}
 
+	// Chroma writes that the port is taken and ends at once: the message must have it every time, also when the process ends before its
+	// output has been read.
+	[Test]
+	public void GivenPortInUseThirtyTimes()
+	{
+		var listener = new TcpListener(IPAddress.Loopback, 0);
+		listener.Start();
+		try
+		{
+			var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+			var messages = new List<string>();
+			for (var attempt = 0; attempt < 30; attempt++)
+			{
+				var e = Assert.ThrowsAsync<InvalidOperationException>(() => ChromaLocalServer.StartAsync(new() { Port = port, DataPath = Path.Combine(_root, "busy" + attempt) }));
+				if (!e!.Message.Contains($"Port {port}", StringComparison.Ordinal))
+					messages.Add($"{attempt}: {e.Message}");
+			}
+			Assert.That(messages, Is.Empty);
+		}
+		finally
+		{
+			listener.Stop();
+		}
+	}
+
 	[Test]
 	public async Task StopTwiceAndDisposeAfterTheStop()
 	{
