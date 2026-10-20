@@ -30,8 +30,10 @@ if [ ! -x /opt/cargo/bin/rustup ]; then
   echo "$RUSTUP_SHA256  /tmp/rustup-init" | sha256sum -c - >/dev/null
   chmod +x /tmp/rustup-init
   /tmp/rustup-init -y --profile minimal --default-toolchain none >/dev/null 2>&1
+  # rustup stays at the version checked above.
+  /opt/cargo/bin/rustup set auto-self-update disable >/dev/null
 fi
-rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal >/dev/null 2>&1
+rustup toolchain install --no-self-update "$RUST_TOOLCHAIN" --profile minimal >/dev/null 2>&1
 if [ ! -x /opt/protoc/bin/protoc ]; then
   curl -sSfL -o /tmp/protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/protoc-$PROTOC_VERSION-linux-$PROTOC_ARCH.zip"
   echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c - >/dev/null
