@@ -31,14 +31,14 @@ A sample that runs as it is: [samples/GettingStarted](https://github.com/ChromaD
 
 ### Like the PersistentClient of Python
 
-[samples/LikePython/LikePython.cs](https://github.com/ChromaDotNet/ChromaDB.Local/blob/main/samples/LikePython/LikePython.cs) does what
+[samples/SearchByText/SearchByText.cs](https://github.com/ChromaDotNet/ChromaDB.Local/blob/main/samples/SearchByText/SearchByText.cs) does what
 `chromadb.PersistentClient(path="chroma-data")` does in Python: Chroma with the data in `chroma-data`, and the default embedding
 function of Chroma, with [ChromaDotNet.Embeddings](https://www.nuget.org/packages/ChromaDotNet.Embeddings). It adds documents
 without embeddings and queries with a text. A second run finds the data of the first, and Python opens the same collection.
 A single file, with the .NET 10 SDK:
 
 ```
-dotnet run samples/LikePython/LikePython.cs
+dotnet run samples/SearchByText/SearchByText.cs
 ```
 
 The Codespace of this repository runs it as it is: no Docker, no Python.

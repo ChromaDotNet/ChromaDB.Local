@@ -8,6 +8,6 @@
 		}
 	},
 	// Restores the packages of the sample and builds it, so that the first run only downloads Chroma's embedding model.
-	"postCreateCommand": "dotnet build samples/LikePython/LikePython.cs",
-	"postAttachCommand": "echo 'Run the sample: dotnet run samples/LikePython/LikePython.cs'"
+	"postCreateCommand": "dotnet build samples/SearchByText/SearchByText.cs",
+	"postAttachCommand": "echo 'Run the sample: dotnet run samples/SearchByText/SearchByText.cs'"
 }
