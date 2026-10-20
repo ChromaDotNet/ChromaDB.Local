@@ -33,6 +33,9 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	private readonly ILogger? _logger;
 	private readonly TaskCompletionSource<bool> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	private readonly TaskCompletionSource<bool> _listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	// The end of the standard output and of the standard error: the last lines of Chroma can arrive after its process has ended.
+	private readonly TaskCompletionSource<bool> _outputEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	private readonly TaskCompletionSource<bool> _errorEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	private readonly TaskCompletionSource<int> _childPid = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	private readonly Queue<string> _recentLines = new();
 	private readonly object _gate = new();
@@ -202,8 +205,20 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		var process = new Process { StartInfo = start, EnableRaisingEvents = true };
 		var server = new ChromaLocalServer(process, guarded, port, dataPath, deleteDataPath, options);
 		process.Exited += (_, _) => server._exited.TrySetResult(true);
-		process.OutputDataReceived += (_, e) => server.OnLine(e.Data, isError: false);
-		process.ErrorDataReceived += (_, e) => server.OnLine(e.Data, isError: true);
+		process.OutputDataReceived += (_, e) =>
+		{
+			if (e.Data is null)
+				server._outputEnded.TrySetResult(true);
+			else
+				server.OnLine(e.Data, isError: false);
+		};
+		process.ErrorDataReceived += (_, e) =>
+		{
+			if (e.Data is null)
+				server._errorEnded.TrySetResult(true);
+			else
+				server.OnLine(e.Data, isError: true);
+		};
 		process.Start();
 		if (Platform.IsWindows)
 		{
@@ -267,6 +282,8 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		}
 		catch (ExitedException)
 		{
+			// Chroma has ended: its last lines, like the one that says the port is taken, are read up to the end of its output.
+			await Task.WhenAny(Task.WhenAll(_outputEnded.Task, _errorEnded.Task), Task.Delay(TimeSpan.FromSeconds(2), CancellationToken.None)).ConfigureAwait(false);
 			var log = RecentLog();
 			if (log.Contains($"127.0.0.1:{Port} is not available"))
 				throw new PortNotAvailableException($"Port {Port} on 127.0.0.1 is not available.");
@@ -457,14 +474,6 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 
 	private string RecentLog()
 	{
-		// The output can still arrive after the process has ended.
-		try
-		{
-			_process.WaitForExit(1000);
-		}
-		catch (InvalidOperationException)
-		{
-		}
 		lock (_recentLines)
 			return string.Join(Environment.NewLine, _recentLines);
 	}

@@ -51,7 +51,14 @@ internal static class ExecutableCache
 	public static async Task<string[]> GetAsync(string rid, string[] names, ChromaLocalOptions options, CancellationToken cancellationToken)
 	{
 		var directory = Path.Combine(options.CacheDirectory is { } cache ? Path.GetFullPath(cache) : DefaultDirectory(), ReleaseTag, rid);
-		Directory.CreateDirectory(directory);
+		try
+		{
+			Directory.CreateDirectory(directory);
+		}
+		catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+		{
+			throw CacheError(directory, e);
+		}
 		var paths = names.Select(name => Path.Combine(directory, name)).ToArray();
 		var hashes = names.Select(name => Hash(rid, name) ?? throw new InvalidOperationException($"This build of ChromaDotNet.Local.Core has no hash for {name} of {rid}.")).ToArray();
 
@@ -151,8 +158,9 @@ internal static class ExecutableCache
 		return ToHex(sha.GetHashAndReset());
 	}
 
-	// The lock file stays: deleted, a process could lock the old file while another creates a new one.
-	private static async Task<FileStream> LockAsync(string path, CancellationToken cancellationToken)
+	// The lock file stays: deleted, a process could lock the old file while another creates a new one. The open is tried again only
+	// while another process holds the file; any other error ends the start at once.
+	internal static async Task<FileStream> LockAsync(string path, CancellationToken cancellationToken)
 	{
 		while (true)
 		{
@@ -160,12 +168,30 @@ internal static class ExecutableCache
 			{
 				return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 			}
-			catch (IOException)
+			catch (IOException e) when (IsHeldByAnotherProcess(e))
 			{
 				await Task.Delay(100, cancellationToken).ConfigureAwait(false);
 			}
+			catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+			{
+				throw CacheError(Path.GetDirectoryName(path)!, e);
+			}
 		}
 	}
+
+	// Windows: ERROR_SHARING_VIOLATION or ERROR_LOCK_VIOLATION. Linux and macOS: flock fails with EWOULDBLOCK, which .NET puts in
+	// HResult as it is, 11 on Linux and 35 on macOS.
+	private static bool IsHeldByAnotherProcess(IOException e)
+	{
+		if (e.GetType() != typeof(IOException))
+			return false;
+		if (Platform.IsWindows)
+			return (e.HResult & 0xFFFF) is 32 or 33;
+		return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? e.HResult == 35 : e.HResult == 11;
+	}
+
+	private static IOException CacheError(string directory, Exception e) =>
+		new($"Cannot use {directory} for the Chroma executables: {e.Message} Set ChromaLocalOptions.CacheDirectory to another directory, or reference a ChromaDotNet.Local.Runtime package.", e);
 
 #if NET
 	private static ValueTask<int> ReadAsync(Stream stream, byte[] buffer, CancellationToken cancellationToken) =>
