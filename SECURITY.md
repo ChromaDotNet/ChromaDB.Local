@@ -40,7 +40,7 @@ nuget.org adds its repository signature (`.signature.p7s`) to the packages it se
 To verify a file downloaded from the release, with Cosign 3 or later:
 
 ```
-cosign verify-blob chroma-linux-x64.gz --bundle chroma-linux-x64.gz.sigstore.json --certificate-identity-regexp '^https://github.com/ChromaDotNet/ChromaDB.Local/[.]github/workflows/ci[.]yml@refs/tags/v' --certificate-oidc-issuer https://token.actions.githubusercontent.com
+cosign verify-blob chroma-linux-x64.gz --bundle chroma-linux-x64.gz.sigstore.json --certificate-identity-regexp '^https://github[.]com/ChromaDotNet/ChromaDB[.]Local/[.]github/workflows/ci[.]yml@refs/tags/v' --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
 With the GitHub CLI:
