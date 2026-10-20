@@ -2,6 +2,7 @@
 
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ChromaDotNet/ChromaDB.Local/badge)](https://scorecard.dev/viewer/?uri=github.com/ChromaDotNet/ChromaDB.Local)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15735/badge)](https://www.bestpractices.dev/projects/15735)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ChromaDotNet/ChromaDB.Local)
 
 Chroma on this machine, without Docker and without Python, for [ChromaDotNet.Client](https://www.nuget.org/packages/ChromaDotNet.Client).
 `ChromaLocalServer.StartAsync` starts the executable of the Chroma CLI as a child process on 127.0.0.1, waits until it answers, and
@@ -27,6 +28,20 @@ var collection = await client.GetOrCreateCollectionAsync("docs");
 `chroma.Uri` is the address of the server, like `http://127.0.0.1:52817`, for `ChromaConfigurationOptions` or `AddChromaClient`.
 
 A sample that runs as it is: [samples/GettingStarted](https://github.com/ChromaDotNet/ChromaDB.Local/blob/main/samples/GettingStarted/Program.cs), with `dotnet run --project samples/GettingStarted`.
+
+### Like the PersistentClient of Python
+
+[samples/LikePython/LikePython.cs](https://github.com/ChromaDotNet/ChromaDB.Local/blob/main/samples/LikePython/LikePython.cs) does what
+`chromadb.PersistentClient(path="chroma-data")` does in Python: Chroma with the data in `chroma-data`, and the default embedding
+function of Chroma, with [ChromaDotNet.Embeddings](https://www.nuget.org/packages/ChromaDotNet.Embeddings). It adds documents
+without embeddings and queries with a text. A second run finds the data of the first, and Python opens the same collection.
+A single file, with the .NET 10 SDK:
+
+```
+dotnet run samples/LikePython/LikePython.cs
+```
+
+The Codespace of this repository runs it as it is: no Docker, no Python.
 
 ## Packages
 

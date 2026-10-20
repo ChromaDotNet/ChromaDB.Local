@@ -1,0 +1,13 @@
+{
+	// Ubuntu 24.04 with the .NET 10 SDK, and no Docker: the sample starts Chroma as a child process.
+	"name": "ChromaDotNet.Local",
+	"image": "mcr.microsoft.com/devcontainers/base:2-noble",
+	"features": {
+		"ghcr.io/devcontainers/features/dotnet:2": {
+			"version": "10.0"
+		}
+	},
+	// Restores the packages of the sample and builds it, so that the first run only downloads Chroma's embedding model.
+	"postCreateCommand": "dotnet build samples/LikePython/LikePython.cs",
+	"postAttachCommand": "echo 'Run the sample: dotnet run samples/LikePython/LikePython.cs'"
+}
