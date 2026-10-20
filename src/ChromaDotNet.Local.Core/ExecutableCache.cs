@@ -47,8 +47,9 @@ internal static class ExecutableCache
 		return Path.Combine(root, "chromadotnet-local");
 	}
 
-	// The paths of the files of the platform in the cache, downloaded when they are not there or do not match their hash.
-	public static async Task<string[]> GetAsync(string rid, string[] names, ChromaLocalOptions options, CancellationToken cancellationToken)
+	// The paths of the files of the platform in the cache, downloaded when they are not there or do not match their hash; with
+	// localSources, copied from those files when they have the hash, as the files of a runtime package another user owns.
+	public static async Task<string[]> GetAsync(string rid, string[] names, ChromaLocalOptions options, CancellationToken cancellationToken, string[]? localSources = null)
 	{
 		var directory = Path.Combine(options.CacheDirectory is { } cache ? Path.GetFullPath(cache) : DefaultDirectory(), ReleaseTag, rid);
 		try
@@ -67,7 +68,17 @@ internal static class ExecutableCache
 			for (var i = 0; i < names.Length; i++)
 			{
 				if (File.Exists(paths[i]) && string.Equals(await HashFileAsync(paths[i], cancellationToken).ConfigureAwait(false), hashes[i], StringComparison.OrdinalIgnoreCase))
+				{
+					Platform.TryMakeExecutable(paths[i]);
 					continue;
+				}
+				if (localSources is not null && string.Equals(await HashFileAsync(localSources[i], cancellationToken).ConfigureAwait(false), hashes[i], StringComparison.OrdinalIgnoreCase))
+				{
+					await CopyAsync(localSources[i], paths[i], hashes[i], cancellationToken).ConfigureAwait(false);
+					continue;
+				}
+				if (!options.DownloadExecutable)
+					throw new InvalidOperationException($"{names[i]} of {rid} is not in {directory}, and ChromaLocalOptions.DownloadExecutable is false.");
 				var asset = AssetName(rid, names[i]);
 				var uri = new Uri(BaseUri(options), asset);
 				await DownloadAsync(uri, paths[i], hashes[i], rid, options.Logger, cancellationToken).ConfigureAwait(false);
@@ -137,8 +148,33 @@ internal static class ExecutableCache
 			if (File.Exists(path))
 				File.Delete(path);
 			File.Move(temporary, path);
+			Platform.TryMakeExecutable(path);
 			if (logger is not null)
 				Log.Downloaded(logger, path, length, stopwatch.ElapsedMilliseconds);
+		}
+		finally
+		{
+			if (File.Exists(temporary))
+				File.Delete(temporary);
+		}
+	}
+
+	// A copy checked against its hash after the copy too, then made executable.
+	private static async Task CopyAsync(string source, string path, string expectedHash, CancellationToken cancellationToken)
+	{
+		var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+		try
+		{
+			using (var from = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true))
+			using (var to = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true))
+				await from.CopyToAsync(to, 81920, cancellationToken).ConfigureAwait(false);
+			var actualHash = await HashFileAsync(temporary, cancellationToken).ConfigureAwait(false);
+			if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+				throw new InvalidDataException($"The copy of {source} has the SHA-256 hash {actualHash}, not {expectedHash}: it was not kept.");
+			if (File.Exists(path))
+				File.Delete(path);
+			File.Move(temporary, path);
+			Platform.TryMakeExecutable(path);
 		}
 		finally
 		{

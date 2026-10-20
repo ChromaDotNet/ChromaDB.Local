@@ -1,6 +1,6 @@
 # Builds the Linux executables on runners of their own architecture, takes those of Windows and macOS from the release of the Chroma CLI, packs, and runs
 # on each platform the tests of the package, the ways to reference it, the download at the first start, the tests of the guard and
-# the suite of the client. A version tag, like v1.5.9.1-preview.3, also publishes: the GitHub release with the executables, their
+# the suite of the client; on Linux, also an application published as root and started as another user. A version tag, like v1.5.9.1-preview.3, also publishes: the GitHub release with the executables, their
 # Sigstore signatures and build provenance, then the packages on NuGet, with trusted publishing, in the environment nuget.
 name: CI
 
@@ -149,6 +149,10 @@ jobs:
           python3 guard/test_guard.py "$guard"
       - name: The ways to reference the package
         run: bash build/package-modes.sh
+      - name: Published as root, started as another user
+        if: runner.os == 'Linux'
+        timeout-minutes: 15
+        run: bash build/nonroot-test.sh "$( [ "$(uname -m)" = x86_64 ] && echo x64 || echo arm64 )"
       - name: The download at the first start
         timeout-minutes: 10
         run: bash build/download-tests.sh

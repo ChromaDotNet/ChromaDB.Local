@@ -100,6 +100,11 @@ or is killed:
 | `ChromaDotNet.Local.Runtime.linux-x64` | built from the tag of the Chroma CLI, with no change to the code, for glibc 2.28 and later |
 | `ChromaDotNet.Local.Runtime.linux-arm64` | built from the tag, as linux-x64 |
 
+In a container published as root and started as another user, as the Dockerfiles of .NET do: NuGet extracts the executables
+with the mode 744, so only root can run them. Then `ChromaDotNet.Local.Core` starts a copy in the cache of the user, checked
+against its hashes. Without a cache it can write, the start says to run `chmod a+x` on the files, or to copy them with
+`COPY --chmod=755`.
+
 Windows on Arm runs the win-x64 executable through emulation. Linux with musl, like Alpine, is not supported.
 
 .NET 8 and later, and .NET Framework on Windows through netstandard2.0 (tested with 4.8). The library is marked as compatible with

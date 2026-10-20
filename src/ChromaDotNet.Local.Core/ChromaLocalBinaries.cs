@@ -40,6 +40,11 @@ internal sealed class ChromaLocalBinaries
 		{
 			chromaPath = directories.Select(d => Path.Combine(d, chromaName)).FirstOrDefault(File.Exists);
 		}
+		// The platform of the runtime package the executable comes from: runtimes/<rid>/native/, or the first one for the files next to
+		// the application.
+		var packageRid = chromaPath is null ? null
+			: rids.FirstOrDefault(r => string.Equals(Path.GetDirectoryName(chromaPath), Path.Combine(baseDirectory, "runtimes", r, "native"), StringComparison.Ordinal))
+				?? rids.FirstOrDefault();
 
 		string? guardPath = null;
 		if (chromaPath is null)
@@ -64,12 +69,34 @@ internal sealed class ChromaLocalBinaries
 
 		if (!Platform.IsWindows)
 		{
-			Platform.EnsureExecutable(chromaPath);
-			if (guardPath is not null)
-				Platform.EnsureExecutable(guardPath);
+			var files = guardPath is null ? new[] { chromaPath } : new[] { chromaPath, guardPath };
+			if (!files.All(Platform.TryMakeExecutable))
+			{
+				// Another user owns the files, with the mode 744 NuGet gives them, as in a container published as root and started as
+				// another user: a copy in the cache of this user, checked against the hashes of this package, runs.
+				var names = files.Select(Path.GetFileName).ToArray();
+				if (options.ExecutablePath is not null || packageRid is null || names.Any(n => ExecutableCache.Hash(packageRid, n!) is null))
+					throw NotExecutable(files);
+				string[] copies;
+				try
+				{
+					copies = await ExecutableCache.GetAsync(packageRid, names!, options, cancellationToken, files).ConfigureAwait(false);
+				}
+				catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
+				{
+					throw NotExecutable(files, e);
+				}
+				chromaPath = copies[0];
+				guardPath = copies.Length > 1 ? copies[1] : null;
+			}
 		}
 		return new ChromaLocalBinaries(chromaPath, guardPath);
 	}
+
+	private static UnauthorizedAccessException NotExecutable(string[] files, Exception? copy = null) => new(
+		$"This user cannot execute {string.Join(" and ", files)}, and cannot make them executable: another user owns them. Run chmod a+x on " +
+		$"them, or copy them with COPY --chmod=755 in a Dockerfile" +
+		(copy is null ? "." : $". Their copy into the cache of this user failed too: {copy.Message}"), copy);
 
 	// The runtime identifiers to look for, best first. Windows on Arm runs the x64 executable through emulation.
 	private static IEnumerable<string> RuntimeIdentifiers()
