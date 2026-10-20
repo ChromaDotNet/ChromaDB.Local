@@ -11,7 +11,7 @@ export MSYS_NO_PATHCONV=1
 docker rm -f chromadotnet-local-guard-macos >/dev/null 2>&1 || true
 docker run --rm --name chromadotnet-local-guard-macos --platform linux/amd64 \
   -v "$root/guard:/guard:ro" -v "$root/artifacts/guard:/out" -e ZIG_VERSION -e ZIG_SHA256 \
-  quay.io/pypa/manylinux_2_28_x86_64 bash -c '
+  quay.io/pypa/manylinux_2_28_x86_64@sha256:1e7b8460ad8fb3fb0fbe1cd818845159ac896b4fd17452d56e892c291f3b97a8 bash -c '
 set -euo pipefail
 cd /tmp
 curl -sSfL -o zig.tar.xz "https://ziglang.org/download/$ZIG_VERSION/zig-x86_64-linux-$ZIG_VERSION.tar.xz"

@@ -1,5 +1,8 @@
 # ChromaDotNet.Local
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ChromaDotNet/ChromaDB.Local/badge)](https://scorecard.dev/viewer/?uri=github.com/ChromaDotNet/ChromaDB.Local)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15735/badge)](https://www.bestpractices.dev/projects/15735)
+
 Chroma on this machine, without Docker and without Python, for [ChromaDotNet.Client](https://www.nuget.org/packages/ChromaDotNet.Client).
 `ChromaLocalServer.StartAsync` starts the executable of the Chroma CLI as a child process on 127.0.0.1, waits until it answers, and
 stops it with `Dispose` or when the application ends.
