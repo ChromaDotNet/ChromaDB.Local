@@ -266,6 +266,29 @@ public class ChromaLocalServerTests
 		Assert.That(ChromaProcessesWith(path), Is.Empty);
 	}
 
+	// A timeout shorter than the start, twenty times: a TimeoutException each time, also when the timer fires late.
+	[Test]
+	public void StartupTimeoutTwentyTimes()
+	{
+		var results = new List<string>();
+		for (var attempt = 0; attempt < 20; attempt++)
+		{
+			try
+			{
+				using var chroma = ChromaLocalServer.StartAsync(new() { DataPath = Path.Combine(_root, "timeout" + attempt), StartupTimeout = TimeSpan.FromMilliseconds(1) }).GetAwaiter().GetResult();
+				results.Add($"{attempt}: started");
+			}
+			catch (TimeoutException)
+			{
+			}
+			catch (Exception e)
+			{
+				results.Add($"{attempt}: {e.GetType().Name}");
+			}
+		}
+		Assert.That(results, Is.Empty);
+	}
+
 	[Test]
 	public void CancelledStartLeavesNothing()
 	{

@@ -269,6 +269,9 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 
 	private async Task WaitUntilReadyAsync(TimeSpan timeout, CancellationToken cancellationToken)
 	{
+		// The timer of CancelAfter can fire late on a busy machine: an answer that comes after the timeout is a timeout all the same.
+		// The stopwatch starts before the timer, so that it counts at least the time the timer counts.
+		var elapsed = Stopwatch.StartNew();
 		using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 		timeoutSource.CancelAfter(timeout);
 		var token = timeoutSource.Token;
@@ -286,7 +289,11 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 				{
 					using var response = await http.GetAsync(heartbeat, token).ConfigureAwait(false);
 					if (response.IsSuccessStatusCode)
+					{
+						if (elapsed.Elapsed > timeout)
+							throw new OperationCanceledException(token);
 						return;
+					}
 				}
 				catch (HttpRequestException)
 				{
