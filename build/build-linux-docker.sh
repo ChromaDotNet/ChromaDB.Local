@@ -6,8 +6,8 @@
 set -euo pipefail
 arch=${1:?x64 or arm64}
 case "$arch" in
-  x64) image=quay.io/pypa/manylinux_2_28_x86_64; platform=linux/amd64 ;;
-  arm64) image=quay.io/pypa/manylinux_2_28_aarch64; platform=linux/arm64 ;;
+  x64) image=quay.io/pypa/manylinux_2_28_x86_64@sha256:1e7b8460ad8fb3fb0fbe1cd818845159ac896b4fd17452d56e892c291f3b97a8; platform=linux/amd64 ;;
+  arm64) image=quay.io/pypa/manylinux_2_28_aarch64@sha256:b873ffc316ffe8a154e3dc4872871de2ebd170db4876c8bbd983d42ff320001e; platform=linux/arm64 ;;
   *) echo "x64 or arm64" >&2; exit 2 ;;
 esac
 root=$(cd "$(dirname "$0")/.." && (pwd -W 2>/dev/null || pwd))

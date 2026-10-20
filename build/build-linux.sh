@@ -8,10 +8,15 @@ CLI_TAG=${CLI_TAG:-cli-1.4.4}
 CLI_COMMIT=${CLI_COMMIT:-11f3c743}
 RUST_TOOLCHAIN=${RUST_TOOLCHAIN:-1.92.0}
 PROTOC_VERSION=${PROTOC_VERSION:-31.1}
+RUSTUP_VERSION=1.29.1
 
 case "$(uname -m)" in
-  x86_64) RID=linux-x64; PROTOC_ARCH=x86_64 ;;
-  aarch64) RID=linux-arm64; PROTOC_ARCH=aarch_64 ;;
+  x86_64) RID=linux-x64; PROTOC_ARCH=x86_64; RUST_HOST=x86_64-unknown-linux-gnu
+    RUSTUP_SHA256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
+    PROTOC_SHA256=96553041f1a91ea0efee963cb16f462f5985b4d65365f3907414c360044d8065 ;;
+  aarch64) RID=linux-arm64; PROTOC_ARCH=aarch_64; RUST_HOST=aarch64-unknown-linux-gnu
+    RUSTUP_SHA256=15f6e4ce9f583b929c996c91562bad6d4454f3281de858b02cdfdef615fac433
+    PROTOC_SHA256=6c554de11cea04c56ebf8e45b54434019b1cd85223d4bbd25c282425e306ecc2 ;;
   *) echo "unsupported machine $(uname -m)" >&2; exit 1 ;;
 esac
 
@@ -20,11 +25,16 @@ echo "rid: $RID, $(ldd --version | head -1)"
 
 export RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo PATH=/opt/cargo/bin:$PATH
 if [ ! -x /opt/cargo/bin/rustup ]; then
-  curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none >/dev/null 2>&1
+  # rustup-init of a fixed version, checked against its digest.
+  curl -sSfL -o /tmp/rustup-init "https://static.rust-lang.org/rustup/archive/$RUSTUP_VERSION/$RUST_HOST/rustup-init"
+  echo "$RUSTUP_SHA256  /tmp/rustup-init" | sha256sum -c - >/dev/null
+  chmod +x /tmp/rustup-init
+  /tmp/rustup-init -y --profile minimal --default-toolchain none >/dev/null 2>&1
 fi
 rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal >/dev/null 2>&1
 if [ ! -x /opt/protoc/bin/protoc ]; then
   curl -sSfL -o /tmp/protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/protoc-$PROTOC_VERSION-linux-$PROTOC_ARCH.zip"
+  echo "$PROTOC_SHA256  /tmp/protoc.zip" | sha256sum -c - >/dev/null
   unzip -oq /tmp/protoc.zip -d /opt/protoc
 fi
 export PROTOC=/opt/protoc/bin/protoc
