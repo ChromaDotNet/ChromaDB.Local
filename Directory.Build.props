@@ -16,7 +16,8 @@
 		<Authors>ChromaDotNet contributors</Authors>
 		<PackageTags>chroma chromadb vector-database embedded local ai embeddings rag</PackageTags>
 		<RepositoryType>git</RepositoryType>
-		<PackageProjectUrl>https://github.com/ChromaDotNet</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/ChromaDotNet/ChromaDB.Local</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/ChromaDotNet/ChromaDB.Local</RepositoryUrl>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<ArtifactsPackages>$(MSBuildThisFileDirectory)artifacts\packages</ArtifactsPackages>

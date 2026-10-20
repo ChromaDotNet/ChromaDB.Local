@@ -21,9 +21,12 @@ namespace ChromaDotNet.Local;
 public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 {
 	private const string GuardPidPrefix = "chroma-local-guard: pid ";
+	private static readonly TimeSpan MaxStartupTimeout = TimeSpan.FromMilliseconds(int.MaxValue);
+	private static readonly TimeSpan MaxShutdownTimeout = TimeSpan.FromMilliseconds(int.MaxValue) - TimeSpan.FromSeconds(2);
 	private const int MaxRecentLines = 40;
 
 	private const string LockFileName = "chromadotnet-local.lock";
+	private const string TemporaryPrefix = "chromadotnet-local-";
 
 	private readonly Process _process;
 	private FileStream? _dataLock;
@@ -91,9 +94,16 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	/// <param name="options">How to start it; <see langword="null"/> for the defaults: temporary data and a free port.</param>
 	/// <param name="cancellationToken">Stops the start, and Chroma with it.</param>
 	/// <returns>The server, which answers.</returns>
-	/// <exception cref="PlatformNotSupportedException">No Chroma executable for this platform, and no
-	/// <see cref="ChromaLocalOptions.ExecutablePath"/>.</exception>
-	/// <exception cref="InvalidOperationException">Chroma ended before it answered; the message has the last lines of its log.</exception>
+	/// <exception cref="ArgumentOutOfRangeException">An option out of its range: a port, or a timeout.</exception>
+	/// <exception cref="PlatformNotSupportedException">No Chroma executable for this platform, no
+	/// <see cref="ChromaLocalOptions.ExecutablePath"/>, and the download turned off.</exception>
+	/// <exception cref="FileNotFoundException"><see cref="ChromaLocalOptions.ExecutablePath"/> is not a file.</exception>
+	/// <exception cref="InvalidOperationException">Chroma ended before it answered, and the message has the last lines of its log; or
+	/// the port is taken; or <see cref="ChromaLocalOptions.DataPath"/> is the data of another server that runs; or the executable could
+	/// not be downloaded, and the message has the address it tried and what to add to start without the network.</exception>
+	/// <exception cref="InvalidDataException">The downloaded executable does not have the SHA-256 hash in this package.</exception>
+	/// <exception cref="IOException">The directory of <see cref="ChromaLocalOptions.CacheDirectory"/> cannot be used.</exception>
+	/// <exception cref="UnauthorizedAccessException">The executables cannot be executed by this user nor copied into its cache.</exception>
 	/// <exception cref="TimeoutException">Chroma did not answer within <see cref="ChromaLocalOptions.StartupTimeout"/>.</exception>
 	public static async Task<ChromaLocalServer> StartAsync(ChromaLocalOptions? options = null, CancellationToken cancellationToken = default)
 	{
@@ -102,13 +112,20 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 			throw new ArgumentOutOfRangeException(nameof(options), "StartupTimeout must be positive.");
 		if (options.ShutdownTimeout < TimeSpan.Zero)
 			throw new ArgumentOutOfRangeException(nameof(options), "ShutdownTimeout must not be negative.");
+		// The waits of .NET take at most int.MaxValue milliseconds, about 24.8 days; the stop adds 2 seconds to ShutdownTimeout.
+		if (options.StartupTimeout > MaxStartupTimeout)
+			throw new ArgumentOutOfRangeException(nameof(options), $"StartupTimeout must be at most {MaxStartupTimeout}.");
+		if (options.ShutdownTimeout > MaxShutdownTimeout)
+			throw new ArgumentOutOfRangeException(nameof(options), $"ShutdownTimeout must be at most {MaxShutdownTimeout}.");
 		if (options.Port is < 1 or > 65535)
 			throw new ArgumentOutOfRangeException(nameof(options), "Port must be from 1 to 65535.");
 
 		var binaries = await ChromaLocalBinaries.ResolveAsync(options, cancellationToken).ConfigureAwait(false);
 		var deleteDataPath = options.DataPath is null;
+		if (deleteDataPath)
+			DeleteAbandonedTemporaryData();
 		var dataPath = deleteDataPath
-			? Path.Combine(Path.GetTempPath(), "chromadotnet-local-" + Guid.NewGuid().ToString("N"))
+			? Path.Combine(Path.GetTempPath(), TemporaryPrefix + Guid.NewGuid().ToString("N"))
 			: Path.GetFullPath(options.DataPath!);
 		Directory.CreateDirectory(dataPath);
 		// Chroma does not stop a second server on the same data, and two servers that write the same files can damage them: a file of
@@ -369,6 +386,40 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 			await ReleaseAsync(dataLock, DataPath, deleteData).ConfigureAwait(false);
 		else if (deleteData)
 			await DeleteDirectoryAsync(DataPath).ConfigureAwait(false);
+	}
+
+	// The temporary data of applications killed before their stop: the directories with the prefix and a name of 32 hex digits,
+	// older than a minute, whose lock nobody holds. The minute keeps a directory that another process has just made and not yet
+	// locked. Best effort: a directory that cannot be read or deleted stays.
+	private static void DeleteAbandonedTemporaryData()
+	{
+		IEnumerable<string> directories;
+		try
+		{
+			directories = Directory.EnumerateDirectories(Path.GetTempPath(), TemporaryPrefix + "*").ToList();
+		}
+		catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+		{
+			return;
+		}
+		foreach (var directory in directories)
+		{
+			var name = Path.GetFileName(directory).Substring(TemporaryPrefix.Length);
+			if (name.Length != 32 || !name.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))
+				continue;
+			try
+			{
+				if (DateTime.UtcNow - Directory.GetLastWriteTimeUtc(directory) < TimeSpan.FromMinutes(1))
+					continue;
+				using (new FileStream(Path.Combine(directory, LockFileName), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+				{
+				}
+				Directory.Delete(directory, recursive: true);
+			}
+			catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+			{
+			}
+		}
 	}
 
 	private static FileStream LockDataPath(string dataPath)

@@ -65,6 +65,42 @@ public class ChromaLocalServerTests
 		Assert.That(Directory.Exists(chroma.DataPath), Is.False);
 	}
 
+	// The temporary data of an application that was killed: a later start with temporary data deletes it, once nobody holds its lock
+	// and it is a minute old. It keeps the directories that are newer, or locked by a server that runs.
+	[Test]
+	public async Task TemporaryDataOfAKilledApplicationIsDeletedLater()
+	{
+		string Make(string state)
+		{
+			var directory = Path.Combine(Path.GetTempPath(), "chromadotnet-local-" + Guid.NewGuid().ToString("N"));
+			Directory.CreateDirectory(directory);
+			File.WriteAllText(Path.Combine(directory, "chroma.sqlite3"), state);
+			if (state != "new")
+				Directory.SetLastWriteTimeUtc(directory, DateTime.UtcNow - TimeSpan.FromMinutes(5));
+			return directory;
+		}
+		var abandoned = Make("abandoned");
+		var recent = Make("new");
+		var held = Make("held");
+		using var lockOfHeld = new FileStream(Path.Combine(held, "chromadotnet-local.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+		Directory.SetLastWriteTimeUtc(held, DateTime.UtcNow - TimeSpan.FromMinutes(5));
+		try
+		{
+			await using (var chroma = await ChromaLocalServer.StartAsync())
+				Assert.That(Directory.Exists(chroma.DataPath), Is.True);
+			Assert.That(Directory.Exists(abandoned), Is.False, "abandoned");
+			Assert.That(Directory.Exists(recent), Is.True, "recent");
+			Assert.That(Directory.Exists(held), Is.True, "held");
+		}
+		finally
+		{
+			lockOfHeld.Dispose();
+			foreach (var directory in new[] { abandoned, recent, held })
+				if (Directory.Exists(directory))
+					Directory.Delete(directory, recursive: true);
+		}
+	}
+
 	[Test]
 	public async Task DataPathIsKeptAndReadAgain()
 	{
@@ -251,6 +287,31 @@ public class ChromaLocalServerTests
 		Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => ChromaLocalServer.StartAsync(new() { Port = 0 }));
 		Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => ChromaLocalServer.StartAsync(new() { StartupTimeout = TimeSpan.Zero }));
 		Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => ChromaLocalServer.StartAsync(new() { ShutdownTimeout = TimeSpan.FromSeconds(-1) }));
+	}
+
+	// Timeouts longer than the waits of .NET can take: rejected before Chroma starts, with the name of the option and the maximum.
+	[TestCase("StartupTimeout")]
+	[TestCase("ShutdownTimeout")]
+	public void TooLongTimeouts(string option)
+	{
+		var path = Path.Combine(_root, "long-" + option);
+		var options = new ChromaLocalOptions { DataPath = path };
+		if (option == "StartupTimeout")
+			options.StartupTimeout = TimeSpan.MaxValue;
+		else
+			options.ShutdownTimeout = TimeSpan.MaxValue;
+		var e = Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => ChromaLocalServer.StartAsync(options));
+		Assert.That(e!.Message, Does.Contain(option).And.Contain("at most"));
+		Assert.That(Directory.Exists(path), Is.False, "nothing started");
+	}
+
+	// The longest timeouts accepted start and stop.
+	[Test]
+	public async Task LongestTimeouts()
+	{
+		var chroma = await ChromaLocalServer.StartAsync(new() { StartupTimeout = TimeSpan.FromMilliseconds(int.MaxValue), ShutdownTimeout = TimeSpan.FromMilliseconds(int.MaxValue - 2000) });
+		await chroma.DisposeAsync();
+		Assert.That(chroma.HasExited, Is.True);
 	}
 
 	// The application ends in three ways: it stops Chroma, it ends without stopping it, it is killed. Chroma must end each time.

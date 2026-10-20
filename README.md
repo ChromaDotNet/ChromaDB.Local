@@ -63,14 +63,15 @@ before each start, and does not keep a file with another hash. Two processes tha
 | `CacheDirectory` | `%LOCALAPPDATA%\ChromaDotNet.Local`, `~/Library/Caches/ChromaDotNet.Local`, `~/.cache/chromadotnet-local` | Where the executables go. |
 | `DownloadUri` | the GitHub release | A mirror with the files of the release, like `https://mirror.example/chromadotnet-local/v1.5.9.1-preview.3/`. |
 
-Without the network and without the file in the cache, the start throws an `InvalidOperationException` that says where it looked
-and what to add. The files of each release come with `SHA256SUMS`, Sigstore signatures and build provenance.
+Without the network and without the file in the cache, the start throws an `InvalidOperationException` with the address it tried
+and what to add to start without the network. Each release has `SHA256SUMS` of the compressed executables, and a Sigstore signature
+and build provenance for each of them and for each package.
 
 ## Options
 
 | `ChromaLocalOptions` | Default | |
 |---|---|---|
-| `DataPath` | a new temporary directory | Where Chroma keeps its data. The temporary directory is deleted at the stop, as the ephemeral client of Python does. |
+| `DataPath` | a new temporary directory | Where Chroma keeps its data. The temporary directory is deleted at the stop; when the application is killed before, a later start with temporary data deletes it. |
 | `Port` | a free port | The port on 127.0.0.1. |
 | `StartupTimeout` | 30 s | How long the start waits for `/api/v2/heartbeat`. |
 | `ShutdownTimeout` | 5 s | Linux and macOS: how long the stop waits after SIGTERM, before SIGKILL. |

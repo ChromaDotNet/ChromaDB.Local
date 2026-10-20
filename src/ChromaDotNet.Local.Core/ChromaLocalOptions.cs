@@ -9,7 +9,8 @@ public sealed class ChromaLocalOptions
 {
 	/// <summary>
 	/// The directory where Chroma keeps its data, created when it does not exist. When it is <see langword="null"/>, the default,
-	/// Chroma keeps its data in a new temporary directory, deleted when the server stops, as the ephemeral client of Python does.
+	/// Chroma keeps its data in a new temporary directory, deleted when the server stops; when the application is killed before, a
+	/// later start with temporary data deletes it.
 	/// One server at a time on a directory: a second start on it throws an <see cref="InvalidOperationException"/>.
 	/// </summary>
 	public string? DataPath { get; set; }
@@ -20,13 +21,14 @@ public sealed class ChromaLocalOptions
 	public int? Port { get; set; }
 
 	/// <summary>
-	/// How long the start waits for Chroma to answer on <c>/api/v2/heartbeat</c>: 30 seconds by default.
+	/// How long the start waits for Chroma to answer on <c>/api/v2/heartbeat</c>: 30 seconds by default, at most
+	/// <see cref="int.MaxValue"/> milliseconds, about 24.8 days.
 	/// </summary>
 	public TimeSpan StartupTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
 	/// <summary>
-	/// On Linux and macOS, how long the stop waits for Chroma to end after SIGTERM, before SIGKILL: 5 seconds by default. On
-	/// Windows the stop ends the process at once.
+	/// On Linux and macOS, how long the stop waits for Chroma to end after SIGTERM, before SIGKILL: 5 seconds by default, at most
+	/// 2 seconds less than <see cref="int.MaxValue"/> milliseconds. On Windows the stop ends the process at once.
 	/// </summary>
 	public TimeSpan ShutdownTimeout { get; set; } = TimeSpan.FromSeconds(5);
 

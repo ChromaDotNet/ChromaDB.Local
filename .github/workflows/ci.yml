@@ -95,6 +95,8 @@ jobs:
           test "$GITHUB_REF_NAME" = "v$version"
           case "$version" in *-preview*) ;; *) echo "only previews for now" >&2; exit 1 ;; esac
       - run: bash build/pack.sh
+      - name: The packages link their repository
+        run: python3 build/check-nuspecs.py artifacts/packages
       - name: Files of the release
         run: bash build/release-assets.sh
       - uses: actions/upload-artifact@v7
