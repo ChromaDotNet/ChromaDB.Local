@@ -111,7 +111,8 @@ public class ExecutableCacheTests
 			});
 			var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadUri = new Uri($"http://127.0.0.1:{port}/") };
 			var e = Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
-			await serve;
+			// An error before the request leaves the server waiting: the finally stops it.
+			await serve.WaitAsync(TimeSpan.FromSeconds(10));
 			Assert.That(e, Is.TypeOf<InvalidOperationException>(), e!.ToString());
 			Assert.That(e.InnerException!.Message, Does.EndWith("."), "the case of the test");
 			Assert.That(e.Message, Does.Contain(e.InnerException.Message).And.Not.Contain(".."));

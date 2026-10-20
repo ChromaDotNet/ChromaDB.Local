@@ -129,14 +129,15 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		if (options.Port is < 1 or > 65535)
 			throw new ArgumentOutOfRangeException(nameof(options), "Port must be from 1 to 65535.");
 
-		var binaries = await ChromaLocalBinaries.ResolveAsync(options, cancellationToken).ConfigureAwait(false);
 		var deleteDataPath = options.DataPath is null;
-		if (deleteDataPath)
-			DeleteAbandonedTemporaryData();
 		var dataPath = deleteDataPath
 			? Path.Combine(Path.GetTempPath(), TemporaryPrefix + Guid.NewGuid().ToString("N"))
 			: Path.GetFullPath(options.DataPath!);
+		// Before the executables, which can be downloaded.
 		CheckLength(dataPath, deleteDataPath);
+		var binaries = await ChromaLocalBinaries.ResolveAsync(options, cancellationToken).ConfigureAwait(false);
+		if (deleteDataPath)
+			DeleteAbandonedTemporaryData();
 		Directory.CreateDirectory(dataPath);
 		// Chroma does not stop a second server on the same data, and two servers that write the same files can damage them: a file of
 		// the directory, open without sharing while the server runs, stops a second ChromaLocalServer. The system closes it when this
@@ -343,8 +344,9 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		{
 			// Chroma has ended: its last lines, like the one that says the port is taken, are read up to the end of its output.
 			await Task.WhenAny(Task.WhenAll(_outputEnded.Task, _errorEnded.Task), Task.Delay(TimeSpan.FromSeconds(2), CancellationToken.None)).ConfigureAwait(false);
-			// The guard ends at once when the executable of Chroma is not there.
-			if (_guarded && !File.Exists(_chromaPath))
+			// The guard ends at once with code 127 when it cannot execute Chroma; a Chroma already started keeps running when its file
+			// is deleted, so the code tells the two apart.
+			if (_guarded && ExitCodeOrUnknown() == "127" && !File.Exists(_chromaPath))
 				throw ExecutableDeleted(_chromaPath, null);
 			var log = RecentLog();
 			if (log.Contains($"127.0.0.1:{Port} is not available"))

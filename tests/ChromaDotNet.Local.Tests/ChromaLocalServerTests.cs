@@ -176,7 +176,8 @@ public class ChromaLocalServerTests
 		var path = PathOfLength(207);
 		var e = Assert.ThrowsAsync<PathTooLongException>(() => ChromaLocalServer.StartAsync(new() { DataPath = path }));
 		Assert.That(e!.Message, Does.Contain(path).And.Contain("206"));
-		Assert.That(Directory.Exists(Path.GetDirectoryName(path)), Is.False, "no directory made");
+		var first = Path.Combine(_root, path.Substring(_root.Length + 1).Split(Path.DirectorySeparatorChar)[0]);
+		Assert.That(Directory.Exists(first), Is.False, "no directory made");
 	}
 
 	// The longest DataPath on Windows keeps the index of a collection across a restart.
@@ -558,6 +559,8 @@ public class ChromaLocalServerTests
 	// A path under the root of the test, of exactly that many characters, in directories of at most 80 characters.
 	private string PathOfLength(int length)
 	{
+		if (length - _root.Length < 2)
+			Assert.Ignore($"The root of the test, {_root}, leaves no room for a path of {length} characters.");
 		var path = _root;
 		while (path.Length < length)
 		{
