@@ -6,7 +6,7 @@
 		<ChromaCliCommit>11f3c7435e71024aa0a2b53710a28d3289d922d1</ChromaCliCommit>
 		<PackageRevision>1</PackageRevision>
 		<VersionPrefix>$(ChromaVersion).$(PackageRevision)</VersionPrefix>
-		<VersionSuffix>preview.3</VersionSuffix>
+		<VersionSuffix>preview.4</VersionSuffix>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
