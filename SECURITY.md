@@ -46,5 +46,5 @@ cosign verify-blob chroma-linux-x64.gz --bundle chroma-linux-x64.gz.sigstore.jso
 With the GitHub CLI:
 
 ```
-gh attestation verify chroma-linux-x64.gz --bundle provenance-v1.5.9.1-preview.4.intoto.jsonl --repo ChromaDotNet/ChromaDB.Local --signer-workflow ChromaDotNet/ChromaDB.Local/.github/workflows/ci.yml --source-ref refs/tags/v1.5.9.1-preview.4
+gh attestation verify chroma-linux-x64.gz --bundle provenance-v1.5.9.1-preview.5.intoto.jsonl --repo ChromaDotNet/ChromaDB.Local --signer-workflow ChromaDotNet/ChromaDB.Local/.github/workflows/ci.yml --source-ref refs/tags/v1.5.9.1-preview.5
 ```
