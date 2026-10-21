@@ -222,7 +222,7 @@ jobs:
           version="${TAG#v}"
           chroma=$(dotnet msbuild src/ChromaDotNet.Local.Core -getProperty:ChromaVersion -nologo)
           cli=$(dotnet msbuild src/ChromaDotNet.Local.Core -getProperty:ChromaCliTag -nologo)
-          sed -e "s/VERSION/$version/g" -e "s/CHROMA_VERSION/$chroma/g" -e "s/CLI_TAG/$cli/g" build/release-notes.md > notes.md
+          sed -e "s/CHROMA_VERSION/$chroma/g" -e "s/CLI_TAG/$cli/g" -e "s/VERSION/$version/g" build/release-notes.md > notes.md
           gh release create "$TAG" release/* --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
             --title "ChromaDotNet.Local $version" --notes-file notes.md
 
