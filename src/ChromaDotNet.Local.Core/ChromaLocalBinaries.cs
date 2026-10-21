@@ -15,7 +15,7 @@ internal sealed class ChromaLocalBinaries
 
 	public string? GuardPath { get; }
 
-	private ChromaLocalBinaries(string chromaPath, string? guardPath)
+	internal ChromaLocalBinaries(string chromaPath, string? guardPath)
 	{
 		ChromaPath = chromaPath;
 		GuardPath = guardPath;

@@ -8,6 +8,18 @@ internal static class Platform
 
 	public static bool IsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
+	// Whether the open of a file with FileShare.None failed because another process holds it. Windows: ERROR_SHARING_VIOLATION or
+	// ERROR_LOCK_VIOLATION. Linux and macOS: flock fails with EWOULDBLOCK, which .NET puts in HResult as it is, 11 on Linux and 35 on
+	// macOS.
+	public static bool IsHeldByAnotherProcess(IOException e)
+	{
+		if (e.GetType() != typeof(IOException))
+			return false;
+		if (IsWindows)
+			return (e.HResult & 0xFFFF) is 32 or 33;
+		return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? e.HResult == 35 : e.HResult == 11;
+	}
+
 	// Whether this process can execute the file, as the system decides it: for the owner, the group or the others, whichever applies.
 	// On Linux NuGet extracts the executables of a package with the mode 744: only the user that restored can run them, and in a
 	// container published as root and started as another user, as the Dockerfiles of .NET do, that is not this user.

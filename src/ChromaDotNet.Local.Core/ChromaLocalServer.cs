@@ -27,8 +27,13 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 
 	private const string LockFileName = "chromadotnet-local.lock";
 	private const string TemporaryPrefix = "chromadotnet-local-";
+	// On Windows the index of Chroma opens its files without the support of long paths, so with at most 259 characters. The longest
+	// of them is <collection id>\data_level0.bin, 53 characters after the data path. With a longer data path Chroma starts, and does
+	// not load the index of a collection at the next start.
+	private const int MaxWindowsDataPathLength = 259 - 53;
 
 	private readonly Process _process;
+	private readonly string _chromaPath;
 	private FileStream? _dataLock;
 	private readonly bool _guarded;
 	private readonly bool _deleteDataPath;
@@ -76,9 +81,10 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	/// </summary>
 	public bool HasExited => _exited.Task.IsCompleted;
 
-	private ChromaLocalServer(Process process, bool guarded, int port, string dataPath, bool deleteDataPath, ChromaLocalOptions options)
+	private ChromaLocalServer(Process process, string chromaPath, bool guarded, int port, string dataPath, bool deleteDataPath, ChromaLocalOptions options)
 	{
 		_process = process;
+		_chromaPath = chromaPath;
 		_guarded = guarded;
 		_deleteDataPath = deleteDataPath;
 		_shutdownTimeout = options.ShutdownTimeout;
@@ -97,12 +103,15 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	/// <exception cref="ArgumentOutOfRangeException">An option out of its range: a port, or a timeout.</exception>
 	/// <exception cref="PlatformNotSupportedException">No Chroma executable for this platform, no
 	/// <see cref="ChromaLocalOptions.ExecutablePath"/>, and the download turned off.</exception>
-	/// <exception cref="FileNotFoundException"><see cref="ChromaLocalOptions.ExecutablePath"/> is not a file.</exception>
+	/// <exception cref="FileNotFoundException"><see cref="ChromaLocalOptions.ExecutablePath"/> is not a file; or the executable was
+	/// deleted after the start had found it, and before it ran.</exception>
+	/// <exception cref="PathTooLongException">On Windows, a <see cref="ChromaLocalOptions.DataPath"/> longer than Chroma works with.</exception>
 	/// <exception cref="InvalidOperationException">Chroma ended before it answered, and the message has the last lines of its log; or
 	/// the port is taken; or <see cref="ChromaLocalOptions.DataPath"/> is the data of another server that runs; or the executable could
 	/// not be downloaded, and the message has the address it tried and what to add to start without the network.</exception>
 	/// <exception cref="InvalidDataException">The downloaded executable does not have the SHA-256 hash in this package.</exception>
-	/// <exception cref="IOException">The directory of <see cref="ChromaLocalOptions.CacheDirectory"/> cannot be used.</exception>
+	/// <exception cref="IOException">The directory of <see cref="ChromaLocalOptions.CacheDirectory"/> cannot be used; or the lock file
+	/// of <see cref="ChromaLocalOptions.DataPath"/> cannot be created.</exception>
 	/// <exception cref="UnauthorizedAccessException">The executables cannot be executed by this user nor copied into its cache.</exception>
 	/// <exception cref="TimeoutException">Chroma did not answer within <see cref="ChromaLocalOptions.StartupTimeout"/>.</exception>
 	public static async Task<ChromaLocalServer> StartAsync(ChromaLocalOptions? options = null, CancellationToken cancellationToken = default)
@@ -120,13 +129,15 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		if (options.Port is < 1 or > 65535)
 			throw new ArgumentOutOfRangeException(nameof(options), "Port must be from 1 to 65535.");
 
-		var binaries = await ChromaLocalBinaries.ResolveAsync(options, cancellationToken).ConfigureAwait(false);
 		var deleteDataPath = options.DataPath is null;
-		if (deleteDataPath)
-			DeleteAbandonedTemporaryData();
 		var dataPath = deleteDataPath
 			? Path.Combine(Path.GetTempPath(), TemporaryPrefix + Guid.NewGuid().ToString("N"))
 			: Path.GetFullPath(options.DataPath!);
+		// Before the executables, which can be downloaded.
+		CheckLength(dataPath, deleteDataPath);
+		var binaries = await ChromaLocalBinaries.ResolveAsync(options, cancellationToken).ConfigureAwait(false);
+		if (deleteDataPath)
+			DeleteAbandonedTemporaryData();
 		Directory.CreateDirectory(dataPath);
 		// Chroma does not stop a second server on the same data, and two servers that write the same files can damage them: a file of
 		// the directory, open without sharing while the server runs, stops a second ChromaLocalServer. The system closes it when this
@@ -205,7 +216,7 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	/// </summary>
 	public void Dispose() => StopAsync().GetAwaiter().GetResult();
 
-	private static ChromaLocalServer Launch(ChromaLocalBinaries binaries, int port, string dataPath, bool deleteDataPath, ChromaLocalOptions options)
+	internal static ChromaLocalServer Launch(ChromaLocalBinaries binaries, int port, string dataPath, bool deleteDataPath, ChromaLocalOptions options)
 	{
 		var chromaArgs = new[] { "run", "--path", dataPath, "--host", "127.0.0.1", "--port", port.ToString(System.Globalization.CultureInfo.InvariantCulture) };
 		var guarded = binaries.GuardPath is not null;
@@ -220,23 +231,17 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		start.Environment["NO_COLOR"] = "1";
 
 		var process = new Process { StartInfo = start, EnableRaisingEvents = true };
-		var server = new ChromaLocalServer(process, guarded, port, dataPath, deleteDataPath, options);
+		var server = new ChromaLocalServer(process, binaries.ChromaPath, guarded, port, dataPath, deleteDataPath, options);
 		process.Exited += (_, _) => server._exited.TrySetResult(true);
-		process.OutputDataReceived += (_, e) =>
+		try
 		{
-			if (e.Data is null)
-				server._outputEnded.TrySetResult(true);
-			else
-				server.OnLine(e.Data, isError: false);
-		};
-		process.ErrorDataReceived += (_, e) =>
+			process.Start();
+		}
+		catch (System.ComponentModel.Win32Exception e) when (new[] { start.FileName, binaries.ChromaPath }.FirstOrDefault(f => !File.Exists(f)) is { } missing)
 		{
-			if (e.Data is null)
-				server._errorEnded.TrySetResult(true);
-			else
-				server.OnLine(e.Data, isError: true);
-		};
-		process.Start();
+			process.Dispose();
+			throw ExecutableDeleted(missing, e);
+		}
 		if (Platform.IsWindows)
 		{
 			if (!WindowsJob.TryAssign(process, out var error))
@@ -250,9 +255,40 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 				Log.NoGuard(server._logger, binaries.ChromaPath);
 			server.ProcessId = process.Id;
 		}
-		process.BeginOutputReadLine();
-		process.BeginErrorReadLine();
+		server.StartReader(process.StandardOutput, isError: false, server._outputEnded);
+		server.StartReader(process.StandardError, isError: true, server._errorEnded);
 		return server;
+	}
+
+	// The output of Chroma, read line by line on a thread of its own. On Windows the pipes of a child process are synchronous, and
+	// BeginOutputReadLine reads them on a thread of the pool, blocked until the next line: two threads of the pool for each server, as
+	// long as it runs. With many servers the pool has no thread left for the start, which then waits for the pool to grow.
+	private void StartReader(StreamReader reader, bool isError, TaskCompletionSource<bool> ended)
+	{
+		var thread = new Thread(() =>
+		{
+			try
+			{
+				string? line;
+				while ((line = reader.ReadLine()) is not null)
+					OnLine(line, isError);
+			}
+			catch (IOException)
+			{
+			}
+			catch (ObjectDisposedException)
+			{
+			}
+			finally
+			{
+				ended.TrySetResult(true);
+			}
+		})
+		{
+			IsBackground = true,
+			Name = isError ? "Chroma standard error" : "Chroma standard output",
+		};
+		thread.Start();
 	}
 
 	private static ProcessStartInfo CreateStartInfo(string fileName, string[] arguments)
@@ -267,7 +303,7 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		return start;
 	}
 
-	private async Task WaitUntilReadyAsync(TimeSpan timeout, CancellationToken cancellationToken)
+	internal async Task WaitUntilReadyAsync(TimeSpan timeout, CancellationToken cancellationToken)
 	{
 		// The timer of CancelAfter can fire late on a busy machine: an answer that comes after the timeout is a timeout all the same.
 		// The stopwatch starts before the timer, so that it counts at least the time the timer counts.
@@ -308,6 +344,10 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		{
 			// Chroma has ended: its last lines, like the one that says the port is taken, are read up to the end of its output.
 			await Task.WhenAny(Task.WhenAll(_outputEnded.Task, _errorEnded.Task), Task.Delay(TimeSpan.FromSeconds(2), CancellationToken.None)).ConfigureAwait(false);
+			// The guard ends at once with code 127 when it cannot execute Chroma; a Chroma already started keeps running when its file
+			// is deleted, so the code tells the two apart.
+			if (_guarded && ExitCodeOrUnknown() == "127" && !File.Exists(_chromaPath))
+				throw ExecutableDeleted(_chromaPath, null);
 			var log = RecentLog();
 			if (log.Contains($"127.0.0.1:{Port} is not available"))
 				throw new PortNotAvailableException($"Port {Port} on 127.0.0.1 is not available.");
@@ -384,8 +424,8 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 			}
 			await _exited.Task.ConfigureAwait(false);
 		}
-		// The process has ended; the pipes of its output can still be read: WaitForExit waits for them too.
-		_process.WaitForExit();
+		// The process has ended; the pipes of its output can still have lines, which the readers read up to the end.
+		await Task.WhenAll(_outputEnded.Task, _errorEnded.Task).ConfigureAwait(false);
 		_process.Dispose();
 		var dataLock = _dataLock;
 		_dataLock = null;
@@ -429,18 +469,35 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		}
 	}
 
-	private static FileStream LockDataPath(string dataPath)
+	internal static FileStream LockDataPath(string dataPath)
 	{
 		var path = Path.Combine(dataPath, LockFileName);
 		try
 		{
 			return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
 		}
-		catch (IOException e)
+		catch (IOException e) when (Platform.IsHeldByAnotherProcess(e))
 		{
 			throw new InvalidOperationException($"{dataPath} is the data of another ChromaLocalServer, which runs: two servers on the same data can damage it.", e);
 		}
+		catch (IOException e)
+		{
+			throw new IOException($"Cannot create {path}, the lock file of the data: {e.Message}", e);
+		}
 	}
+
+	private static void CheckLength(string dataPath, bool temporary)
+	{
+		var length = dataPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Length;
+		if (!Platform.IsWindows || length <= MaxWindowsDataPathLength)
+			return;
+		throw new PathTooLongException(temporary
+			? $"The temporary data directory {dataPath} has {length} characters, and on Windows Chroma works with at most {MaxWindowsDataPathLength}: set DataPath, or TEMP to a shorter directory."
+			: $"The DataPath {dataPath} has {length} characters, and on Windows Chroma works with at most {MaxWindowsDataPathLength}: set a shorter one.");
+	}
+
+	private static FileNotFoundException ExecutableDeleted(string path, Exception? inner) =>
+		new($"{path} was deleted after the start had found it, and before it ran. A new start looks for the executable again.", path, inner);
 
 	private static async Task ReleaseAsync(FileStream dataLock, string dataPath, bool deleteData)
 	{

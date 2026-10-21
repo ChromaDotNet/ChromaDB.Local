@@ -155,6 +155,112 @@ public class ChromaLocalServerTests
 		Assert.That(await CountAsync(again, "still_fine"), Is.EqualTo(3));
 	}
 
+	// A lock file that cannot be created for another reason than another server, here a directory that is not there: the real error,
+	// with the path.
+	[Test]
+	public void LockOfTheDataFailsWithTheRealError()
+	{
+		var path = Path.Combine(_root, "missing");
+		var e = Assert.Catch(() => ChromaLocalServer.LockDataPath(path));
+		Assert.That(e, Is.InstanceOf<IOException>(), e!.ToString());
+		Assert.That(e.Message, Does.Contain(path).And.Not.Contain("another ChromaLocalServer"));
+	}
+
+	// On Windows the index of Chroma opens its files with paths of at most 259 characters: a longer DataPath is refused before anything
+	// starts, and no directory is made.
+	[Test]
+	public void DataPathTooLongOnWindows()
+	{
+		if (!OperatingSystem.IsWindows())
+			Assert.Ignore("Windows only.");
+		var path = PathOfLength(207);
+		var e = Assert.ThrowsAsync<PathTooLongException>(() => ChromaLocalServer.StartAsync(new() { DataPath = path }));
+		Assert.That(e!.Message, Does.Contain(path).And.Contain("206"));
+		var first = Path.Combine(_root, path.Substring(_root.Length + 1).Split(Path.DirectorySeparatorChar)[0]);
+		Assert.That(Directory.Exists(first), Is.False, "no directory made");
+	}
+
+	// The longest DataPath on Windows keeps the index of a collection across a restart.
+	[Test]
+	public async Task LongestDataPathOnWindows()
+	{
+		if (!OperatingSystem.IsWindows())
+			Assert.Ignore("Windows only.");
+		var path = PathOfLength(206);
+		await using (var chroma = await ChromaLocalServer.StartAsync(new() { DataPath = path }))
+		{
+			using var client = chroma.CreateClient();
+			var records = client.GetCollectionClient(await client.GetOrCreateCollectionAsync("long"));
+			for (var start = 0; start < 3000; start += 500)
+				await records.AddAsync(
+					Enumerable.Range(start, 500).Select(i => "id" + i).ToList(),
+					Enumerable.Range(start, 500).Select(i => new ReadOnlyMemory<float>([i, 1, i % 7, i % 3])).ToList());
+		}
+		await using var again = await ChromaLocalServer.StartAsync(new() { DataPath = path });
+		using var againClient = again.CreateClient();
+		var found = await againClient.GetCollectionClient(await againClient.GetCollectionAsync("long"))
+			.QueryAsync([new ReadOnlyMemory<float>([5, 1, 5, 2])], nResults: 3);
+		Assert.That(found[0], Has.Count.EqualTo(3));
+	}
+
+	// Each server reads the output of Chroma with threads of its own, not with threads of the pool: with the pool held to two threads,
+	// three servers that run at the same time start.
+	[Test]
+	public async Task ServersLeaveThePoolFree()
+	{
+		var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+		start.ArgumentList.Add(Path.Combine(TestHostDirectory, "ChromaDotNet.Local.TestHost.dll"));
+		start.ArgumentList.Add("many");
+		start.ArgumentList.Add("3");
+		start.Environment["DOTNET_PROCESSOR_COUNT"] = "2";
+		using var host = Process.Start(start)!;
+		var output = host.StandardOutput.ReadToEndAsync();
+		var error = host.StandardError.ReadToEndAsync();
+		using (var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(90)))
+		{
+			try
+			{
+				await host.WaitForExitAsync(timeout.Token);
+			}
+			catch (OperationCanceledException)
+			{
+				host.Kill(entireProcessTree: true);
+			}
+		}
+		var text = await output + await error;
+		TestContext.Out.WriteLine(text);
+		Assert.That(text, Does.Contain("started 3").And.Contain("stopped"));
+	}
+
+	// An executable deleted after it was found and before Chroma started: an error that says so, with the path. Without the guard the
+	// start of the process fails; with it, on Linux and macOS, the guard ends.
+	[TestCase(false)]
+	[TestCase(true)]
+	public async Task ExecutableDeletedBeforeTheStart(bool guarded)
+	{
+		if (guarded && OperatingSystem.IsWindows())
+			Assert.Ignore("No guard on Windows.");
+		var missing = Path.Combine(_root, OperatingSystem.IsWindows() ? "chroma.exe" : "chroma");
+		var guard = guarded ? Directory.GetFiles(AppContext.BaseDirectory, "chroma-local-guard", SearchOption.AllDirectories)
+			.First(f => f.Contains(System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier, StringComparison.Ordinal)) : null;
+		var binaries = new ChromaLocalBinaries(missing, guard);
+		var dataPath = Path.Combine(_root, "data");
+		Directory.CreateDirectory(dataPath);
+		Exception? e;
+		if (!guarded)
+		{
+			e = Assert.Catch(() => ChromaLocalServer.Launch(binaries, FreePort(), dataPath, false, new ChromaLocalOptions()));
+		}
+		else
+		{
+			var server = ChromaLocalServer.Launch(binaries, FreePort(), dataPath, false, new ChromaLocalOptions());
+			e = Assert.CatchAsync(() => server.WaitUntilReadyAsync(TimeSpan.FromSeconds(30), CancellationToken.None));
+			await server.StopAsync();
+		}
+		Assert.That(e, Is.TypeOf<FileNotFoundException>(), e!.ToString());
+		Assert.That(e.Message, Does.Contain(missing).And.Contain("deleted"));
+	}
+
 	[Test]
 	public async Task GivenPort()
 	{
@@ -448,6 +554,22 @@ public class ChromaLocalServerTests
 			await Task.Delay(25);
 		}
 		return condition();
+	}
+
+	// A path under the root of the test, of exactly that many characters, in directories of at most 80 characters.
+	private string PathOfLength(int length)
+	{
+		if (length - _root.Length < 2)
+			Assert.Ignore($"The root of the test, {_root}, leaves no room for a path of {length} characters.");
+		var path = _root;
+		while (path.Length < length)
+		{
+			var remaining = length - path.Length;
+			var take = remaining <= 81 ? remaining : Math.Min(81, remaining - 2);
+			path = Path.Combine(path, new string('d', take - 1));
+		}
+		Assert.That(path, Has.Length.EqualTo(length));
+		return path;
 	}
 
 	private static int FreePort()
