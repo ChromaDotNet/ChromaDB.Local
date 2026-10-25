@@ -1,5 +1,5 @@
 Preview of ChromaDotNet.Local.ChromaDB VERSION, with Chroma CHROMA_VERSION (the Chroma CLI CLI_TAG), for ChromaDotNet.Local
-1.5.9.1-preview.7. Community project, not affiliated with Chroma.
+1.5.9.1-preview.7. Independent project. Not affiliated with, endorsed by or sponsored by Chroma Inc. CHROMA is a registered trademark of Chroma Inc., used here only to describe compatibility.
 
 The packages are on NuGet: [ChromaDotNet.Local.ChromaDB](https://www.nuget.org/packages/ChromaDotNet.Local.ChromaDB/VERSION), with the
 ChromaDotNet.Local.ChromaDB.Runtime package of each platform, which has its executable. With

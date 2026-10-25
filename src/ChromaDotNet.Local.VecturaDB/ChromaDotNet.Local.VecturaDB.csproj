@@ -11,7 +11,7 @@
 		<GenerateDocumentationFile>false</GenerateDocumentationFile>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageTags>$(PackageTags) vecturadb</PackageTags>
-		<PackageDescription>VecturaDB $(VecturaDBEngineVersion) for ChromaDotNet.Local: ChromaLocalServer.StartAsync starts the VecturaDB executable as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. VecturaDB is a vector database compatible with the Chroma API, bringing Chroma Cloud's features to open source: sparse vectors, BM25 and the Search API. The first start downloads the executable of its platform from the GitHub release of VecturaDB, for Windows x64, Linux x64 and arm64, macOS x64 and arm64, and checks its SHA-256 hash. Community project, not affiliated with Chroma.</PackageDescription>
+		<PackageDescription>VecturaDB $(VecturaDBEngineVersion) for ChromaDotNet.Local: ChromaLocalServer.StartAsync starts the VecturaDB executable as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. VecturaDB is a vector database compatible with the Chroma API, bringing Chroma Cloud's features to open source: sparse vectors, BM25 and the Search API. The first start downloads the executable of its platform from the GitHub release of VecturaDB, for Windows x64, Linux x64 and arm64, macOS x64 and arm64, and checks its SHA-256 hash. Independent project. Not affiliated with, endorsed by or sponsored by Chroma Inc. CHROMA is a registered trademark of Chroma Inc., used here only to describe compatibility.</PackageDescription>
 	</PropertyGroup>
 	<Import Project="VecturaDB.props" />
 	<ItemGroup>

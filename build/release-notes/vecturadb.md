@@ -1,5 +1,4 @@
-Preview of ChromaDotNet.Local.VecturaDB VERSION, with VecturaDB VECTURADB_VERSION, for ChromaDotNet.Local 1.5.9.1-preview.7. Community
-project, not affiliated with Chroma.
+Preview of ChromaDotNet.Local.VecturaDB VERSION, with VecturaDB VECTURADB_VERSION, for ChromaDotNet.Local 1.5.9.1-preview.7. Independent project. Not affiliated with, endorsed by or sponsored by Chroma Inc. CHROMA is a registered trademark of Chroma Inc., used here only to describe compatibility.
 
 [ChromaDotNet.Local.VecturaDB](https://www.nuget.org/packages/ChromaDotNet.Local.VecturaDB/VERSION) starts VecturaDB. VecturaDB is a
 vector database compatible with the Chroma API, bringing Chroma Cloud's features to open source: sparse vectors, BM25 and the Search
