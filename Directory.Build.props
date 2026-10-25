@@ -12,8 +12,8 @@
 		<ChromaDBSuffix>preview.6</ChromaDBSuffix>
 		<ChromaDBVersion>$(ChromaVersion).$(ChromaDBRevision)-$(ChromaDBSuffix)</ChromaDBVersion>
 		<!-- ChromaDotNet.Local.VecturaDB: the version of VecturaDB, from the tag of its release, then the revision of the package for that
-		     version, as 1.0.0-preview.2.1, or 1.0.0.1 for a stable VecturaDB; tags vecturadb-v<version>. -->
-		<VecturaDBTag>v1.0.0-preview.2</VecturaDBTag>
+		     version, as 1.0.0-preview.3.1, or 1.0.0.1 for a stable VecturaDB; tags vecturadb-v<version>. -->
+		<VecturaDBTag>v1.0.0-preview.3</VecturaDBTag>
 		<VecturaDBEngineVersion>$(VecturaDBTag.TrimStart('v'))</VecturaDBEngineVersion>
 		<VecturaDBRevision>1</VecturaDBRevision>
 		<VecturaDBVersion>$(VecturaDBEngineVersion).$(VecturaDBRevision)</VecturaDBVersion>

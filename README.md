@@ -50,7 +50,7 @@ An application references the package of an engine, which brings the base, Chrom
 | Package | Server | Executables |
 |---|---|---|
 | [ChromaDotNet.Local.ChromaDB](https://www.nuget.org/packages/ChromaDotNet.Local.ChromaDB) | Chroma 1.5.9 (the Chroma CLI 1.4.4) | the five platforms, in its runtime packages |
-| [ChromaDotNet.Local.VecturaDB](https://www.nuget.org/packages/ChromaDotNet.Local.VecturaDB) | [VecturaDB](https://github.com/VecturaDB/VecturaDB) 1.0.0-preview.2, compatible with the Chroma API, with sparse vectors, BM25, the Search API and collection fork | downloaded at the first start, from the GitHub release of VecturaDB |
+| [ChromaDotNet.Local.VecturaDB](https://www.nuget.org/packages/ChromaDotNet.Local.VecturaDB) | [VecturaDB](https://github.com/VecturaDB/VecturaDB) 1.0.0-preview.3, compatible with the Chroma API, with sparse vectors, BM25, the Search API and collection fork | downloaded at the first start, from the GitHub release of VecturaDB |
 
 The code is the same with each engine. [ChromaDotNet.Local](https://www.nuget.org/packages/ChromaDotNet.Local), the base, starts
 and stops the server, and downloads and checks the executables; it has no engine of its own. A library can reference the base
@@ -181,7 +181,7 @@ Each package has a line of versions, with tags of its own:
 |---|---|---|
 | ChromaDotNet.Local | 1.5.9.1-preview.N | `v1.5.9.1-preview.N` |
 | ChromaDotNet.Local.ChromaDB and its runtime packages | the version of Chroma, then the revision of these packages: 1.5.9.1 has Chroma 1.5.9 (the Chroma CLI 1.4.4) | `chromadb-v1.5.9.1-preview.N` |
-| ChromaDotNet.Local.VecturaDB | the version of VecturaDB, then the revision of this package: 1.0.0-preview.2.1 has VecturaDB 1.0.0-preview.2 | `vecturadb-v1.0.0-preview.2.N` |
+| ChromaDotNet.Local.VecturaDB | the version of VecturaDB, then the revision of this package: 1.0.0-preview.3.1 has VecturaDB 1.0.0-preview.3 | `vecturadb-v1.0.0-preview.3.N` |
 
 The engines work with the base from 1.5.9.1-preview.6 to before 2.0.
 
