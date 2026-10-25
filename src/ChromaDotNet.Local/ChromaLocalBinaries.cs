@@ -54,8 +54,19 @@ internal sealed class ChromaLocalBinaries
 			{
 				if (engine!.ExecutableName(rid) is not { } name)
 					continue;
-				chromaPath = roots.Select(root => Path.Combine(root, "runtimes", rid, "native", name)).FirstOrDefault(File.Exists)
-					?? flat.Select(d => Path.Combine(d, name)).FirstOrDefault(File.Exists);
+				chromaPath = roots.Select(root => Path.Combine(root, "runtimes", rid, "native", name)).FirstOrDefault(File.Exists);
+				// Next to the application, where a publish for one platform puts it, a file of that name is the executable of the engine
+				// only with its hash: it can be another one, like the apphost of an application, or of a project it references, named
+				// vecturadb.
+				foreach (var candidate in chromaPath is null ? flat.Select(d => Path.Combine(d, name)).Where(File.Exists) : [])
+				{
+					if (engine.Hash(rid) is { } hash
+						&& string.Equals(await ExecutableCache.HashFileAsync(candidate, cancellationToken).ConfigureAwait(false), hash, StringComparison.OrdinalIgnoreCase))
+					{
+						chromaPath = candidate;
+						break;
+					}
+				}
 				if (chromaPath is not null)
 				{
 					packageRid = rid;

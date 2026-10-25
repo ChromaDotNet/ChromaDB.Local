@@ -75,6 +75,19 @@ check "vecturadb: start fails" "$(failed $code)" failed
 check "vecturadb: the message says the download" "$(echo "$run" | grep -c 'ChromaDotNet.Local.VecturaDB downloads the executables of win-x64, linux-x64, linux-arm64, osx-x64 and osx-arm64 at the first start')" 1
 check "vecturadb: no executable" "$(lines "$(files vecturadb vecturadb)")" 0
 
+echo "== an application named vecturadb, as the executable of the engine"
+make named-vecturadb vecturadb -p:AssemblyName=vecturadb
+run=$(env CHROMA_LOCAL_NO_DOWNLOAD=1 dotnet artifacts/modes/named-vecturadb/out/vecturadb.dll smoke 2>&1); code=$?
+echo "$run" | grep -m1 "Exception" | cut -c1-200
+check "named vecturadb: its apphost next to it" "$(lines "$(files named-vecturadb vecturadb)")" 1
+check "named vecturadb: it does not start itself, the start says the download" "$(failed $code)/$(echo "$run" | grep -c 'No VecturaDB executable for')" failed/1
+
+echo "== an application named chromadb without an apphost, published for $rid"
+make named-chromadb-rid chromadb -r "$rid" --self-contained false -p:AssemblyName=chromadb -p:UseAppHost=false
+run=$(env CHROMA_LOCAL_NO_DOWNLOAD=1 dotnet artifacts/modes/named-chromadb-rid/out/chromadb.dll smoke 2>&1); code=$?
+echo "$run" | head -1
+check "named chromadb for $rid: it starts the engine next to it, without the download" "$code" 0
+
 echo "== base"
 make base base
 check "base: the warning at the build" "$(grep 'warning CDNL001: ChromaDotNet.Local has no engine: add the package ChromaDotNet.Local.ChromaDB for Chroma, or ChromaDotNet.Local.VecturaDB for VecturaDB.' artifacts/modes/base/build.log | sort -u | wc -l | tr -d ' ')" 1

@@ -194,7 +194,7 @@ internal static class ExecutableCache
 		}
 	}
 
-	private static async Task<string> HashFileAsync(string path, CancellationToken cancellationToken)
+	internal static async Task<string> HashFileAsync(string path, CancellationToken cancellationToken)
 	{
 		using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true);
 		using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
