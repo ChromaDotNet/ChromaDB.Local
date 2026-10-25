@@ -1,4 +1,4 @@
-Preview of ChromaDotNet.Local VERSION, the base without an engine. Community project, not affiliated with Chroma.
+Preview of ChromaDotNet.Local VERSION, the base without an engine. Independent project. Not affiliated with, endorsed by or sponsored by Chroma Inc. CHROMA is a registered trademark of Chroma Inc., used here only to describe compatibility.
 
 [ChromaDotNet.Local](https://www.nuget.org/packages/ChromaDotNet.Local/VERSION) starts the server of an engine package as a child
 process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. An application references an

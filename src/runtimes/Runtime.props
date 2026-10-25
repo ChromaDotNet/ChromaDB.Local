@@ -12,7 +12,7 @@
 		<!-- NU5128: no lib folder, on purpose. -->
 		<NoWarn>$(NoWarn);NU5128</NoWarn>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-		<PackageDescription>The Chroma $(ChromaVersion) executable for $(ChromaRid), for ChromaDotNet.Local.ChromaDB: $(ChromaSourceDescription) Chroma is under the Apache License 2.0; the notices of its dependencies are in THIRD-PARTY-NOTICES.md. Community project, not affiliated with Chroma.</PackageDescription>
+		<PackageDescription>The Chroma $(ChromaVersion) executable for $(ChromaRid), for ChromaDotNet.Local.ChromaDB: $(ChromaSourceDescription) Chroma is under the Apache License 2.0; the notices of its dependencies are in THIRD-PARTY-NOTICES.md. Independent project. Not affiliated with, endorsed by or sponsored by Chroma Inc. CHROMA is a registered trademark of Chroma Inc., used here only to describe compatibility.</PackageDescription>
 		<ChromaExe Condition="'$(ChromaRid)' == 'win-x64'">chromadb.exe</ChromaExe>
 		<ChromaExe Condition="'$(ChromaRid)' != 'win-x64'">chromadb</ChromaExe>
 		<!-- The executable under the name of the engine, and the information on its build, as build/stage.sh puts them. -->

@@ -7,7 +7,7 @@
 		<PackageId>ChromaDotNet.Local</PackageId>
 		<AssemblyName>ChromaDotNet.Local</AssemblyName>
 		<RootNamespace>ChromaDotNet.Local</RootNamespace>
-		<PackageDescription>The base of ChromaDotNet.Local, without an engine: ChromaLocalServer.StartAsync starts the server of an engine package as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. Add an engine: ChromaDotNet.Local.ChromaDB for Chroma, or ChromaDotNet.Local.VecturaDB for VecturaDB. Community project, not affiliated with Chroma.</PackageDescription>
+		<PackageDescription>The base of ChromaDotNet.Local, without an engine: ChromaLocalServer.StartAsync starts the server of an engine package as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. Add an engine: ChromaDotNet.Local.ChromaDB for Chroma, or ChromaDotNet.Local.VecturaDB for VecturaDB. Independent project. Not affiliated with, endorsed by or sponsored by Chroma Inc. CHROMA is a registered trademark of Chroma Inc., used here only to describe compatibility.</PackageDescription>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
