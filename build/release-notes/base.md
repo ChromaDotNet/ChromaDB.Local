@@ -7,10 +7,13 @@ engine, which brings the base:
 - [ChromaDotNet.Local.ChromaDB](https://www.nuget.org/packages/ChromaDotNet.Local.ChromaDB), for Chroma;
 - [ChromaDotNet.Local.VecturaDB](https://www.nuget.org/packages/ChromaDotNet.Local.VecturaDB), for VecturaDB.
 
-In this preview:
+In this preview, ChromaDotNet.Local depends on ChromaDotNet.Client 2.18.0 or later: an application that references an earlier
+ChromaDotNet.Client updates it, or the restore fails with NU1605.
+
+From 1.5.9.1-preview.5:
 
 - ChromaDotNet.Local has no engine of its own. An application on ChromaDotNet.Local 1.5.9.1-preview.5 adds ChromaDotNet.Local.ChromaDB,
-  and updates ChromaDotNet.Local to 1.5.9.1-preview.6 or removes it: left at 1.5.9.1-preview.5, the restore fails with NU1605. Its
+  and updates ChromaDotNet.Local to 1.5.9.1-preview.7 or removes it: left at 1.5.9.1-preview.5, the restore fails with NU1605. Its
   code stays the same. Without an engine, the build of an application or of a project of tests gives the warning CDNL001, and
   ChromaLocalServer.StartAsync fails with a message that names the two packages, unless ChromaLocalOptions.ExecutablePath names an
   executable.

@@ -71,7 +71,7 @@ Without an engine, the build of an application or of a project of tests gives th
 
 ### From 1.5.9.1-preview.5
 
-| 1.5.9.1-preview.5 | 1.5.9.1-preview.6 |
+| 1.5.9.1-preview.5 | 1.5.9.1-preview.7 |
 |---|---|
 | ChromaDotNet.Local | ChromaDotNet.Local.ChromaDB |
 | ChromaDotNet.Local.Core and `ChromaDotNet.Local.Runtime.<rid>` | ChromaDotNet.Local.ChromaDB |
@@ -79,7 +79,7 @@ Without an engine, the build of an application or of a project of tests gives th
 
 The code stays the same. `ChromaLocalServer.ChromaVersion` is obsolete: `EngineVersion` of the server says the version. A reference
 to ChromaDotNet.Local 1.5.9.1-preview.5 next to ChromaDotNet.Local.ChromaDB fails at the restore with NU1605: update it to
-1.5.9.1-preview.6, or remove it.
+1.5.9.1-preview.7, or remove it.
 
 The data of 1.5.9.1-preview.5 opens with both engines, and the data of each engine opens with the other.
 
@@ -117,7 +117,7 @@ does not keep a file with another hash. Two processes that start at the same tim
 |---|---|---|
 | `DownloadExecutable` | `true` | `false` turns the download off: then the executable of a runtime package, or `ExecutablePath`, is needed. |
 | `CacheDirectory` | `%LOCALAPPDATA%\ChromaDotNet.Local`, `~/Library/Caches/ChromaDotNet.Local`, `~/.cache/chromadotnet-local` | Where the executables go. |
-| `DownloadUri` | the GitHub release of the engine | A mirror with the files of that release, like `https://mirror.example/chromadotnet-local/chromadb-v1.5.9.1-preview.6/`. |
+| `DownloadUri` | the GitHub release of the engine | A mirror with the files of that release, like `https://mirror.example/chromadotnet-local/chromadb-v1.5.9.1-preview.7/`. |
 
 Without the network and without the file in the cache, the start throws an `InvalidOperationException` with the address it tried
 and what to add to start without the network. Each release of ChromaDotNet.Local.ChromaDB has `SHA256SUMS` of the compressed
@@ -183,7 +183,7 @@ Each package has a line of versions, with tags of its own:
 | ChromaDotNet.Local.ChromaDB and its runtime packages | the version of Chroma, then the revision of these packages: 1.5.9.1 has Chroma 1.5.9 (the Chroma CLI 1.4.4) | `chromadb-v1.5.9.1-preview.N` |
 | ChromaDotNet.Local.VecturaDB | the version of VecturaDB, then the revision of this package: 1.0.0-preview.3.1 has VecturaDB 1.0.0-preview.3 | `vecturadb-v1.0.0-preview.3.N` |
 
-The engines work with the base from 1.5.9.1-preview.6 to before 2.0.
+The engines work with the base from 1.5.9.1-preview.7 to before 2.0.
 
 ## Licenses
 
