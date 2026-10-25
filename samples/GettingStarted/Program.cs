@@ -5,7 +5,7 @@ using ChromaDotNet.Local;
 // The data stays in chroma-data next to the application, so the next run finds the records of this one.
 var dataPath = Path.Combine(AppContext.BaseDirectory, "chroma-data");
 await using var chroma = await ChromaLocalServer.StartAsync(new() { DataPath = dataPath });
-Console.WriteLine($"Chroma {ChromaLocalServer.ChromaVersion} at {chroma.Uri}");
+Console.WriteLine($"Chroma {chroma.EngineVersion} at {chroma.Uri}");
 Console.WriteLine($"Data in {chroma.DataPath}");
 
 using var client = chroma.CreateClient();

@@ -1,0 +1,16 @@
+<Project>
+	<!-- The base finds the assembly of this package by the name of a type: trimming and NativeAOT keep the assembly, with the metadata
+	     that describe the engine. -->
+	<ItemGroup>
+		<TrimmerRootAssembly Include="ChromaDotNet.Local.ChromaDB" />
+	</ItemGroup>
+	<!-- <ChromaDotNetLocalChromaDBDownload>true</ChromaDotNetLocalChromaDBDownload> in the project takes the executables of the runtime
+	     packages out of the output and of the publish: the first start downloads the one of its platform from the release, into the
+	     cache of the user, and checks its SHA-256 hash. -->
+	<Target Name="ChromaDotNetLocalChromaDBDownload" AfterTargets="ResolvePackageAssets" Condition="'$(ChromaDotNetLocalChromaDBDownload)' == 'true'">
+		<ItemGroup>
+			<RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)" Condition="'%(RuntimeTargetsCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.win-x64' Or '%(RuntimeTargetsCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.linux-x64' Or '%(RuntimeTargetsCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.linux-arm64' Or '%(RuntimeTargetsCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.osx-x64' Or '%(RuntimeTargetsCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.osx-arm64'" />
+			<NativeCopyLocalItems Remove="@(NativeCopyLocalItems)" Condition="'%(NativeCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.win-x64' Or '%(NativeCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.linux-x64' Or '%(NativeCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.linux-arm64' Or '%(NativeCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.osx-x64' Or '%(NativeCopyLocalItems.NuGetPackageId)' == 'ChromaDotNet.Local.ChromaDB.Runtime.osx-arm64'" />
+		</ItemGroup>
+	</Target>
+</Project>

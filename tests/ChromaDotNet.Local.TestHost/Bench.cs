@@ -12,7 +12,7 @@ internal static class Bench
 		for (var i = 0; i < 5; i++)
 		{
 			var stopwatch = Stopwatch.StartNew();
-			var chroma = await ChromaLocalServer.StartAsync(new ChromaLocalOptions { DataPath = Path.Combine(directory, "start" + i) });
+			var chroma = await ChromaLocalServer.StartAsync(new ChromaLocalOptions { Engine = HostEngine.Chosen, DataPath = Path.Combine(directory, "start" + i) });
 			starts.Add(stopwatch.ElapsedMilliseconds);
 			stopwatch.Restart();
 			await chroma.DisposeAsync();
@@ -24,7 +24,7 @@ internal static class Bench
 		// 10,000 records of 384 dimensions, a stop, and a start on the same data.
 		var path = Path.Combine(directory, "restart");
 		const int Count = 10_000;
-		await using (var chroma = await ChromaLocalServer.StartAsync(new ChromaLocalOptions { DataPath = path }))
+		await using (var chroma = await ChromaLocalServer.StartAsync(new ChromaLocalOptions { Engine = HostEngine.Chosen, DataPath = path }))
 		{
 			using var client = chroma.CreateClient();
 			var records = client.GetCollectionClient(await client.GetOrCreateCollectionAsync("bench"));
@@ -43,7 +43,7 @@ internal static class Bench
 		}
 		{
 			var stopwatch = Stopwatch.StartNew();
-			await using var chroma = await ChromaLocalServer.StartAsync(new ChromaLocalOptions { DataPath = path });
+			await using var chroma = await ChromaLocalServer.StartAsync(new ChromaLocalOptions { Engine = HostEngine.Chosen, DataPath = path });
 			var started = stopwatch.ElapsedMilliseconds;
 			using var client = chroma.CreateClient();
 			var records = client.GetCollectionClient(await client.GetCollectionAsync("bench"));
@@ -55,8 +55,8 @@ internal static class Bench
 		{
 			var stopwatch = Stopwatch.StartNew();
 			var both = await Task.WhenAll(
-				ChromaLocalServer.StartAsync(new ChromaLocalOptions { DataPath = Path.Combine(directory, "a") }),
-				ChromaLocalServer.StartAsync(new ChromaLocalOptions { DataPath = Path.Combine(directory, "b") }));
+				ChromaLocalServer.StartAsync(new ChromaLocalOptions { Engine = HostEngine.Chosen, DataPath = Path.Combine(directory, "a") }),
+				ChromaLocalServer.StartAsync(new ChromaLocalOptions { Engine = HostEngine.Chosen, DataPath = Path.Combine(directory, "b") }));
 			Console.WriteLine($"two at the same time ms: {stopwatch.ElapsedMilliseconds}, ports {both[0].Port} and {both[1].Port}");
 			foreach (var chroma in both)
 				await chroma.DisposeAsync();

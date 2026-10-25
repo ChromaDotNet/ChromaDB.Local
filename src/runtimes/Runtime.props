@@ -1,38 +1,37 @@
 <Project>
-	<!-- A runtime package: the Chroma executable of one platform in runtimes/<rid>/native/, and on Linux and macOS the guard next to
-	     it. No assembly. ChromaRid and ChromaSource are set by the project of each platform. -->
+	<!-- A runtime package of ChromaDotNet.Local.ChromaDB: the Chroma executable of one platform, as chromadb, in runtimes/<rid>/native/.
+	     No assembly. The guard is in the base package. ChromaRid and ChromaSourceDescription are set by the project of each platform. -->
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<IsPackable>true</IsPackable>
-		<PackageId>ChromaDotNet.Local.Runtime.$(ChromaRid)</PackageId>
+		<PackageId>ChromaDotNet.Local.ChromaDB.Runtime.$(ChromaRid)</PackageId>
+		<Version>$(ChromaDBVersion)</Version>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
 		<GenerateDocumentationFile>false</GenerateDocumentationFile>
 		<!-- NU5128: no lib folder, on purpose. -->
 		<NoWarn>$(NoWarn);NU5128</NoWarn>
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
-		<PackageDescription>The Chroma $(ChromaVersion) executable for $(ChromaRid), for ChromaDotNet.Local: $(ChromaSourceDescription) Chroma is under the Apache License 2.0; the notices of its dependencies are in THIRD-PARTY-NOTICES.md. Community project, not affiliated with Chroma.</PackageDescription>
-		<ChromaExe Condition="'$(ChromaRid)' == 'win-x64'">chroma.exe</ChromaExe>
-		<ChromaExe Condition="'$(ChromaRid)' != 'win-x64'">chroma</ChromaExe>
-		<ChromaBinaries>$(MSBuildThisFileDirectory)..\..\artifacts\$(ChromaSource)\$(ChromaRid)\</ChromaBinaries>
-		<ChromaGuard>$(MSBuildThisFileDirectory)..\..\artifacts\guard\$(ChromaRid)\chroma-local-guard</ChromaGuard>
-		<ChromaGuard Condition="'$(ChromaSource)' == 'linux'">$(ChromaBinaries)chroma-local-guard</ChromaGuard>
+		<PackageDescription>The Chroma $(ChromaVersion) executable for $(ChromaRid), for ChromaDotNet.Local.ChromaDB: $(ChromaSourceDescription) Chroma is under the Apache License 2.0; the notices of its dependencies are in THIRD-PARTY-NOTICES.md. Community project, not affiliated with Chroma.</PackageDescription>
+		<ChromaExe Condition="'$(ChromaRid)' == 'win-x64'">chromadb.exe</ChromaExe>
+		<ChromaExe Condition="'$(ChromaRid)' != 'win-x64'">chromadb</ChromaExe>
+		<!-- The executable under the name of the engine, and the information on its build, as build/stage.sh puts them. -->
+		<ChromaStage>$(MSBuildThisFileDirectory)..\..\artifacts\stage\chromadb\$(ChromaRid)\</ChromaStage>
+		<ChromaBuildInfo>$(ChromaStage)BUILD-INFO.txt</ChromaBuildInfo>
 	</PropertyGroup>
-	<!-- The folders of PackagePath without a slash at the end: on Linux "native\" gives "native//chroma" in the package. -->
+	<!-- The folders of PackagePath without a slash at the end: on Linux "native\" gives "native//chromadb" in the package. -->
 	<ItemGroup>
-		<None Include="$(ChromaBinaries)$(ChromaExe)" Condition="Exists('$(ChromaBinaries)$(ChromaExe)')" Pack="true" PackagePath="runtimes/$(ChromaRid)/native" Visible="false" />
-		<None Include="$(ChromaGuard)" Pack="true" PackagePath="runtimes/$(ChromaRid)/native" Visible="false" Condition="'$(ChromaRid)' != 'win-x64' And Exists('$(ChromaGuard)')" />
-		<None Include="$(ChromaBinaries)BUILD-INFO.txt" Condition="Exists('$(ChromaBinaries)BUILD-INFO.txt')" Pack="true" PackagePath="\" Visible="false" />
+		<None Include="$(ChromaStage)$(ChromaExe)" Condition="Exists('$(ChromaStage)$(ChromaExe)')" Pack="true" PackagePath="runtimes/$(ChromaRid)/native" Visible="false" />
+		<None Include="$(ChromaBuildInfo)" Condition="Exists('$(ChromaBuildInfo)')" Pack="true" PackagePath="\" Visible="false" />
 		<None Include="$(MSBuildThisFileDirectory)LICENSE.txt" Pack="true" PackagePath="\" Visible="false" />
 		<None Include="$(MSBuildThisFileDirectory)..\..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" Visible="false" />
 	</ItemGroup>
-	<!-- .NET Framework does not copy runtimes/<rid>/native/ to the output: the targets of the package do it. -->
+	<!-- .NET Framework does not copy runtimes/<rid>/native/ of a package to the output: the targets of the package do it. -->
 	<ItemGroup Condition="'$(ChromaRid)' == 'win-x64'">
-		<None Include="$(MSBuildProjectDirectory)\ChromaDotNet.Local.Runtime.win-x64.targets" Pack="true" PackagePath="buildTransitive" Visible="false" />
+		<None Include="$(MSBuildProjectDirectory)\ChromaDotNet.Local.ChromaDB.Runtime.win-x64.targets" Pack="true" PackagePath="buildTransitive" Visible="false" />
 	</ItemGroup>
 	<!-- -p:AllowMissingBinaries=true packs a runtime package without its executable, only to try the other packages locally. -->
 	<Target Name="CheckChromaBinaries" BeforeTargets="GenerateNuspec" Condition="'$(AllowMissingBinaries)' != 'true'">
-		<Error Condition="!Exists('$(ChromaBinaries)$(ChromaExe)')" Text="Missing $(ChromaBinaries)$(ChromaExe): run build/fetch-chroma-cli.sh or build/build-linux-docker.sh." />
-		<Error Condition="'$(ChromaRid)' != 'win-x64' And !Exists('$(ChromaGuard)')" Text="Missing $(ChromaGuard): run the build of the guard." />
+		<Error Condition="!Exists('$(ChromaStage)$(ChromaExe)')" Text="Missing $(ChromaStage)$(ChromaExe): run build/stage.sh, after build/fetch-chroma-cli.sh or build/build-linux-docker.sh." />
 	</Target>
 </Project>

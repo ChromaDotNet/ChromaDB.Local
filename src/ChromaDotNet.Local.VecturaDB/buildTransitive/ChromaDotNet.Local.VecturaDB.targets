@@ -1,0 +1,7 @@
+<Project>
+	<!-- The base finds the assembly of this package by the name of a type: trimming and NativeAOT keep the assembly, with the metadata
+	     that describe the engine. -->
+	<ItemGroup>
+		<TrimmerRootAssembly Include="ChromaDotNet.Local.VecturaDB" />
+	</ItemGroup>
+</Project>

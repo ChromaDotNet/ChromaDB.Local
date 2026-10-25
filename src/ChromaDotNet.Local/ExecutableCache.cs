@@ -7,28 +7,28 @@ using Microsoft.Extensions.Logging;
 
 namespace ChromaDotNet.Local;
 
-// The executables downloaded from the GitHub release of this version, for an application with ChromaDotNet.Local.Core and no runtime
-// package. The release has each file compressed with gzip, as <name>-<rid>.gz; this assembly has the SHA-256 hash of each file
-// uncompressed, written at the build from the files that went into the runtime packages. A file is checked against it after the
-// download and before each start. A lock file of the directory keeps a second process from downloading at the same time: it waits,
-// then finds the file there.
+// The executables of the cache of the user, in <cache>/<directory of the version>/<rid>/:
+// - the executable of an engine, downloaded from the release of its version for an application without its runtime package, or copied
+//   from the runtime package when this user cannot execute the file of the package;
+// - the guard, copied from the base package when this user cannot execute it.
+// The release has the executable of each platform, compressed with gzip when the name of the file ends with .gz. The engine package
+// has the SHA-256 hash of each executable, uncompressed, and the base package that of the guard: a file is checked against it after
+// the download or the copy, and before each start. A lock file of the directory keeps a second process from downloading at the same
+// time: it waits, then finds the file there.
 internal static class ExecutableCache
 {
-	public const string DefaultReleaseUri = "https://github.com/ChromaDotNet/ChromaDB.Local/releases/download/";
-	private const string HashPrefix = "ChromaExecutable:";
-
-	// v1.5.9.1-preview.3: the tag of the release with the executables of this version.
-	public static string ReleaseTag { get; } = Metadata("ReleaseTag") ?? "unknown";
+	// v1.5.9.1-preview.6: the directory of the copies of the guard of this version of the base.
+	public static string BaseCacheName { get; } = Metadata("ChromaDotNet.Local.CacheName") ?? "unknown";
 
 	private static readonly Lazy<HttpClient> Http = new(() =>
 	{
 		var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-		client.DefaultRequestHeaders.UserAgent.ParseAdd($"ChromaDotNet.Local/{ReleaseTag.TrimStart('v')}");
+		client.DefaultRequestHeaders.UserAgent.ParseAdd($"ChromaDotNet.Local/{BaseCacheName.TrimStart('v')}");
 		return client;
 	});
 
-	// The hash of a file of a platform, like ("linux-x64", "chroma"), or null when this build has none.
-	public static string? Hash(string rid, string name) => Metadata($"{HashPrefix}{rid}:{name}")?.ToLowerInvariant();
+	// The hash of the guard of a platform, or null when this build has none.
+	public static string? GuardHash(string rid) => Metadata($"ChromaDotNet.Local.Guard:{rid}")?.ToLowerInvariant();
 
 	public static string DefaultDirectory()
 	{
@@ -47,11 +47,27 @@ internal static class ExecutableCache
 		return Path.Combine(root, "chromadotnet-local");
 	}
 
-	// The paths of the files of the platform in the cache, downloaded when they are not there or do not match their hash; with
-	// localSources, copied from those files when they have the hash, as the files of a runtime package another user owns.
-	public static async Task<string[]> GetAsync(string rid, string[] names, ChromaLocalOptions options, CancellationToken cancellationToken, string[]? localSources = null)
+	// The executable of the engine for a platform, in the cache: downloaded from the release when it is not there or does not match its
+	// hash; with localSource, copied from that file when it has the hash, as the file of a runtime package another user owns.
+	public static Task<string> GetEngineAsync(EnginePackage engine, string rid, ChromaLocalOptions options, CancellationToken cancellationToken, string? localSource = null)
 	{
-		var directory = Path.Combine(options.CacheDirectory is { } cache ? Path.GetFullPath(cache) : DefaultDirectory(), ReleaseTag, rid);
+		var name = engine.ExecutableName(rid) ?? throw new InvalidOperationException($"{engine.PackageId} has no executable for {rid}.");
+		var hash = engine.Hash(rid) ?? throw new InvalidOperationException($"{engine.PackageId} has no hash for the executable of {rid}.");
+		var asset = engine.AssetName(rid);
+		var download = asset is null ? null : new Uri(BaseUri(options, engine), asset);
+		return GetAsync(engine.CacheName, rid, name, hash, download, engine, options, cancellationToken, localSource);
+	}
+
+	// The guard of a platform, in the cache: copied from the file of the base package, when it has the hash of this build.
+	public static Task<string> GetGuardAsync(string rid, string localSource, ChromaLocalOptions options, CancellationToken cancellationToken)
+	{
+		var hash = GuardHash(rid) ?? throw new InvalidOperationException($"This build of ChromaDotNet.Local has no hash for the guard of {rid}.");
+		return GetAsync(BaseCacheName, rid, ChromaLocalBinaries.GuardName, hash, null, null, options, cancellationToken, localSource);
+	}
+
+	internal static async Task<string> GetAsync(string cacheName, string rid, string name, string hash, Uri? download, EnginePackage? engine, ChromaLocalOptions options, CancellationToken cancellationToken, string? localSource = null)
+	{
+		var directory = Path.Combine(options.CacheDirectory is { } cache ? Path.GetFullPath(cache) : DefaultDirectory(), cacheName, rid);
 		try
 		{
 			Directory.CreateDirectory(directory);
@@ -60,56 +76,45 @@ internal static class ExecutableCache
 		{
 			throw CacheError(directory, e);
 		}
-		var paths = names.Select(name => Path.Combine(directory, name)).ToArray();
-		var hashes = names.Select(name => Hash(rid, name) ?? throw new InvalidOperationException($"This build of ChromaDotNet.Local.Core has no hash for {name} of {rid}.")).ToArray();
+		var path = Path.Combine(directory, name);
 
 		using (await LockAsync(Path.Combine(directory, ".lock"), cancellationToken).ConfigureAwait(false))
 		{
-			DeleteLeftovers(directory, names);
-			for (var i = 0; i < names.Length; i++)
+			DeleteLeftovers(directory, [name]);
+			if (Directory.Exists(path))
+				throw new IOException($"{path} is a directory, not the file {name} of the cache: delete it, or set ChromaLocalOptions.CacheDirectory to another directory.");
+			if (File.Exists(path) && string.Equals(await HashFileAsync(path, cancellationToken).ConfigureAwait(false), hash, StringComparison.OrdinalIgnoreCase))
 			{
-				if (Directory.Exists(paths[i]))
-					throw new IOException($"{paths[i]} is a directory, not the file {names[i]} of the cache: delete it, or set ChromaLocalOptions.CacheDirectory to another directory.");
-				if (File.Exists(paths[i]) && string.Equals(await HashFileAsync(paths[i], cancellationToken).ConfigureAwait(false), hashes[i], StringComparison.OrdinalIgnoreCase))
-				{
-					Platform.TryMakeExecutable(paths[i]);
-					continue;
-				}
-				if (localSources is not null && string.Equals(await HashFileAsync(localSources[i], cancellationToken).ConfigureAwait(false), hashes[i], StringComparison.OrdinalIgnoreCase))
-				{
-					await CopyAsync(localSources[i], paths[i], hashes[i], cancellationToken).ConfigureAwait(false);
-					continue;
-				}
-				if (!options.DownloadExecutable)
-					throw new InvalidOperationException($"{names[i]} of {rid} is not in {directory}, and ChromaLocalOptions.DownloadExecutable is false.");
-				var asset = AssetName(rid, names[i]);
-				var uri = new Uri(BaseUri(options), asset);
-				await DownloadAsync(uri, paths[i], hashes[i], rid, options.Logger, cancellationToken).ConfigureAwait(false);
+				Platform.TryMakeExecutable(path);
+				return path;
 			}
+			if (localSource is not null && string.Equals(await HashFileAsync(localSource, cancellationToken).ConfigureAwait(false), hash, StringComparison.OrdinalIgnoreCase))
+			{
+				await CopyAsync(localSource, path, hash, cancellationToken).ConfigureAwait(false);
+				return path;
+			}
+			if (download is null)
+				throw new InvalidDataException($"{localSource ?? name} does not have the SHA-256 hash {hash} of this package.");
+			if (!options.DownloadExecutable)
+				throw new InvalidOperationException($"{name} of {rid} is not in {directory}, and ChromaLocalOptions.DownloadExecutable is false.");
+			await DownloadAsync(download, path, hash, rid, engine!, options.Logger, cancellationToken).ConfigureAwait(false);
+			return path;
 		}
-		return paths;
 	}
 
-	// chroma.exe of win-x64 is chroma-win-x64.exe.gz; chroma of linux-x64 is chroma-linux-x64.gz.
-	public static string AssetName(string rid, string name)
+	private static Uri BaseUri(ChromaLocalOptions options, EnginePackage engine)
 	{
-		var extension = Path.GetExtension(name);
-		return $"{Path.GetFileNameWithoutExtension(name)}-{rid}{extension}.gz";
-	}
-
-	private static Uri BaseUri(ChromaLocalOptions options)
-	{
-		var uri = options.DownloadUri ?? new Uri(DefaultReleaseUri + ReleaseTag + "/");
+		var uri = options.DownloadUri ?? engine.ReleaseUri;
 		// Without the slash at the end, a relative name would replace the last segment.
 		return uri.AbsoluteUri[uri.AbsoluteUri.Length - 1] == '/' ? uri : new Uri(uri.AbsoluteUri + "/");
 	}
 
-	private static async Task DownloadAsync(Uri uri, string path, string expectedHash, string rid, ILogger? logger, CancellationToken cancellationToken)
+	private static async Task DownloadAsync(Uri uri, string path, string expectedHash, string rid, EnginePackage engine, ILogger? logger, CancellationToken cancellationToken)
 	{
 		var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
 		var stopwatch = Stopwatch.StartNew();
 		if (logger is not null)
-			Log.Downloading(logger, uri);
+			Log.Downloading(logger, engine.DisplayName, uri);
 		try
 		{
 			string actualHash;
@@ -124,13 +129,14 @@ internal static class ExecutableCache
 #else
 				using var body = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 #endif
-				using var gzip = new GZipStream(body, CompressionMode.Decompress);
+				// The files of the release ending with .gz are compressed with gzip; the others are the executables as they are.
+				using var content = uri.AbsolutePath.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ? new GZipStream(body, CompressionMode.Decompress) : body;
 				using (var file = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true))
 				using (var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
 				{
 					var buffer = new byte[81920];
 					int read;
-					while ((read = await ReadAsync(gzip, buffer, cancellationToken).ConfigureAwait(false)) > 0)
+					while ((read = await ReadAsync(content, buffer, cancellationToken).ConfigureAwait(false)) > 0)
 					{
 						sha.AppendData(buffer, 0, read);
 						await WriteAsync(file, buffer, read, cancellationToken).ConfigureAwait(false);
@@ -142,9 +148,11 @@ internal static class ExecutableCache
 			catch (Exception e) when (e is HttpRequestException || e is IOException || e is InvalidDataException || (e is TaskCanceledException && !cancellationToken.IsCancellationRequested))
 			{
 				throw new InvalidOperationException(
-					$"Could not download the Chroma executable for {rid} from {uri}: {Sentence(e.Message)} Without the network: reference ChromaDotNet.Local, " +
-					$"or ChromaDotNet.Local.Runtime.{rid}, which have the executable; or set DownloadUri to a mirror with the files of the release " +
-					$"{ReleaseTag}, or ExecutablePath to an executable.", e);
+					$"Could not download the {engine.DisplayName} executable for {rid} from {uri}: {Sentence(e.Message)} Without the network: " +
+					(engine.Engine == ChromaLocalEngine.ChromaDB
+						? $"the runtime packages of {engine.PackageId} have the executable, unless ChromaDotNetLocalChromaDBDownload takes it out of the output; or set "
+						: "set ") +
+					$"DownloadUri to a mirror with the files of {engine.ReleaseUri}, or ExecutablePath to an executable.", e);
 			}
 			if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
 				throw new InvalidDataException($"The file downloaded from {uri} has the SHA-256 hash {actualHash}, not {expectedHash}: it was not kept.");
@@ -186,7 +194,7 @@ internal static class ExecutableCache
 		}
 	}
 
-	private static async Task<string> HashFileAsync(string path, CancellationToken cancellationToken)
+	internal static async Task<string> HashFileAsync(string path, CancellationToken cancellationToken)
 	{
 		using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true);
 		using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -251,7 +259,7 @@ internal static class ExecutableCache
 	}
 
 	private static IOException CacheError(string directory, Exception e) =>
-		new($"Cannot use {directory} for the Chroma executables: {Sentence(e.Message)} Set ChromaLocalOptions.CacheDirectory to another directory, or reference a ChromaDotNet.Local.Runtime package.", e);
+		new($"Cannot use {directory} for the executables: {Sentence(e.Message)} Set ChromaLocalOptions.CacheDirectory to another directory.", e);
 
 	// A message as a sentence, with one period at the end: those of .NET Framework have one, some of .NET do not.
 	private static string Sentence(string message) => message.Length > 0 && message[message.Length - 1] == '.' ? message : message + ".";
@@ -286,5 +294,5 @@ internal static class ExecutableCache
 		.FirstOrDefault(a => a.Key == key)?.Value;
 
 	private static InvalidOperationException NoDirectory() =>
-		new("No directory of the user for the downloaded Chroma executables: set ChromaLocalOptions.CacheDirectory.");
+		new("No directory of the user for the downloaded executables: set ChromaLocalOptions.CacheDirectory.");
 }

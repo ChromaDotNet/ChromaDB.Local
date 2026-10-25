@@ -1,16 +1,16 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using ChromaDB.Client;
 using Microsoft.Extensions.Logging;
 
 namespace ChromaDotNet.Local;
 
 /// <summary>
-/// A Chroma server on this machine: the executable of the Chroma CLI, started as a child process on 127.0.0.1, with the data in a
-/// directory. It stops with <see cref="StopAsync(CancellationToken)"/>, <see cref="DisposeAsync"/> or <see cref="Dispose"/>, and when
-/// this process ends, also when it is killed: on Windows through a job object, on Linux and macOS through a small guard process.
+/// A server on this machine, of the engine of a package: ChromaDotNet.Local.ChromaDB for Chroma, or ChromaDotNet.Local.VecturaDB for
+/// VecturaDB. Its executable runs as a child process on 127.0.0.1, with the data in a directory. It stops with
+/// <see cref="StopAsync(CancellationToken)"/>, <see cref="DisposeAsync"/> or <see cref="Dispose"/>, and when this process ends, also
+/// when it is killed: on Windows through a job object, on Linux and macOS through a small guard process.
 /// </summary>
 /// <example>
 /// <code>
@@ -27,13 +27,14 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 
 	private const string LockFileName = "chromadotnet-local.lock";
 	private const string TemporaryPrefix = "chromadotnet-local-";
-	// On Windows the index of Chroma opens its files without the support of long paths, so with at most 259 characters. The longest
-	// of them is <collection id>\data_level0.bin, 53 characters after the data path. With a longer data path Chroma starts, and does
-	// not load the index of a collection at the next start.
-	private const int MaxWindowsDataPathLength = 259 - 53;
+	// On Windows the index of the server opens its files without the support of long paths: each engine package says the longest data
+	// path its server works with. This one, that of Chroma, is for an ExecutablePath without an engine package.
+	private const int DefaultMaxWindowsDataPathLength = 259 - 53;
 
 	private readonly Process _process;
 	private readonly string _chromaPath;
+	// The server in messages: Chroma, VecturaDB, or "The server" for an ExecutablePath without an engine package.
+	private readonly string _name;
 	private FileStream? _dataLock;
 	private readonly bool _guarded;
 	private readonly bool _deleteDataPath;
@@ -41,7 +42,7 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	private readonly ILogger? _logger;
 	private readonly TaskCompletionSource<bool> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	private readonly TaskCompletionSource<bool> _listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
-	// The end of the standard output and of the standard error: the last lines of Chroma can arrive after its process has ended.
+	// The end of the standard output and of the standard error: the last lines of the server can arrive after its process has ended.
 	private readonly TaskCompletionSource<bool> _outputEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	private readonly TaskCompletionSource<bool> _errorEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	private readonly TaskCompletionSource<int> _childPid = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -50,11 +51,23 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	private Task? _stop;
 
 	/// <summary>
-	/// The version of Chroma in the runtime packages of this version of ChromaDotNet.Local, like <c>1.5.9</c>.
+	/// The version of the server of the only engine package of the application, like <c>1.5.9</c> for ChromaDotNet.Local.ChromaDB.
 	/// </summary>
-	public static string ChromaVersion { get; } = typeof(ChromaLocalServer).Assembly
-		.GetCustomAttributes<AssemblyMetadataAttribute>()
-		.First(a => a.Key == "ChromaVersion").Value!;
+	/// <exception cref="InvalidOperationException">The application has no engine package, or two.</exception>
+	[Obsolete("The base has no engine of its own: use EngineVersion of the server, the version of its engine package.")]
+	public static string ChromaVersion => EnginePackage.Resolve(new ChromaLocalOptions())!.Version;
+
+	/// <summary>
+	/// The engine of the server, or <see langword="null"/> for an <see cref="ChromaLocalOptions.ExecutablePath"/> started without an
+	/// engine package.
+	/// </summary>
+	public ChromaLocalEngine? Engine { get; }
+
+	/// <summary>
+	/// The version of the server of the engine package, like <c>1.5.9</c> for ChromaDotNet.Local.ChromaDB, or <see langword="null"/>
+	/// without an engine package.
+	/// </summary>
+	public string? EngineVersion { get; }
 
 	/// <summary>
 	/// The URI of the server, like <c>http://127.0.0.1:52817</c>.
@@ -72,19 +85,22 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	public string DataPath { get; }
 
 	/// <summary>
-	/// The process id of Chroma.
+	/// The process id of the server.
 	/// </summary>
 	public int ProcessId { get; private set; }
 
 	/// <summary>
-	/// Whether Chroma has ended, stopped or on its own.
+	/// Whether the server has ended, stopped or on its own.
 	/// </summary>
 	public bool HasExited => _exited.Task.IsCompleted;
 
-	private ChromaLocalServer(Process process, string chromaPath, bool guarded, int port, string dataPath, bool deleteDataPath, ChromaLocalOptions options)
+	private ChromaLocalServer(Process process, ChromaLocalBinaries binaries, bool guarded, int port, string dataPath, bool deleteDataPath, ChromaLocalOptions options)
 	{
 		_process = process;
-		_chromaPath = chromaPath;
+		_chromaPath = binaries.ChromaPath;
+		_name = binaries.Engine?.DisplayName ?? "The server";
+		Engine = binaries.Engine?.Engine;
+		EngineVersion = binaries.Engine?.Version;
 		_guarded = guarded;
 		_deleteDataPath = deleteDataPath;
 		_shutdownTimeout = options.ShutdownTimeout;
@@ -95,25 +111,27 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	}
 
 	/// <summary>
-	/// Starts Chroma, and returns when it answers on <c>/api/v2/heartbeat</c>.
+	/// Starts the server of the engine, and returns when it answers on <c>/api/v2/heartbeat</c>.
 	/// </summary>
 	/// <param name="options">How to start it; <see langword="null"/> for the defaults: temporary data and a free port.</param>
-	/// <param name="cancellationToken">Stops the start, and Chroma with it.</param>
+	/// <param name="cancellationToken">Stops the start, and the server with it.</param>
 	/// <returns>The server, which answers.</returns>
 	/// <exception cref="ArgumentOutOfRangeException">An option out of its range: a port, or a timeout.</exception>
-	/// <exception cref="PlatformNotSupportedException">No Chroma executable for this platform, no
+	/// <exception cref="PlatformNotSupportedException">No executable of the engine for this platform, no
 	/// <see cref="ChromaLocalOptions.ExecutablePath"/>, and the download turned off.</exception>
 	/// <exception cref="FileNotFoundException"><see cref="ChromaLocalOptions.ExecutablePath"/> is not a file; or the executable was
 	/// deleted after the start had found it, and before it ran.</exception>
-	/// <exception cref="PathTooLongException">On Windows, a <see cref="ChromaLocalOptions.DataPath"/> longer than Chroma works with.</exception>
-	/// <exception cref="InvalidOperationException">Chroma ended before it answered, and the message has the last lines of its log; or
-	/// the port is taken; or <see cref="ChromaLocalOptions.DataPath"/> is the data of another server that runs; or the executable could
-	/// not be downloaded, and the message has the address it tried and what to add to start without the network.</exception>
+	/// <exception cref="PathTooLongException">On Windows, a <see cref="ChromaLocalOptions.DataPath"/> longer than the server works with.</exception>
+	/// <exception cref="InvalidOperationException">The application has no engine package, and no
+	/// <see cref="ChromaLocalOptions.ExecutablePath"/>; or two, and <see cref="ChromaLocalOptions.Engine"/> does not choose one; or not
+	/// the one it chooses. Or the server ended before it answered, and the message has the last lines of its log; or the port is taken;
+	/// or <see cref="ChromaLocalOptions.DataPath"/> is the data of another server that runs; or the executable could not be downloaded,
+	/// and the message has the address it tried and what to do to start without the network.</exception>
 	/// <exception cref="InvalidDataException">The downloaded executable does not have the SHA-256 hash in this package.</exception>
 	/// <exception cref="IOException">The directory of <see cref="ChromaLocalOptions.CacheDirectory"/> cannot be used; or the lock file
 	/// of <see cref="ChromaLocalOptions.DataPath"/> cannot be created.</exception>
 	/// <exception cref="UnauthorizedAccessException">The executables cannot be executed by this user nor copied into its cache.</exception>
-	/// <exception cref="TimeoutException">Chroma did not answer within <see cref="ChromaLocalOptions.StartupTimeout"/>.</exception>
+	/// <exception cref="TimeoutException">The server did not answer within <see cref="ChromaLocalOptions.StartupTimeout"/>.</exception>
 	public static async Task<ChromaLocalServer> StartAsync(ChromaLocalOptions? options = null, CancellationToken cancellationToken = default)
 	{
 		options ??= new ChromaLocalOptions();
@@ -133,18 +151,19 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		var dataPath = deleteDataPath
 			? Path.Combine(Path.GetTempPath(), TemporaryPrefix + Guid.NewGuid().ToString("N"))
 			: Path.GetFullPath(options.DataPath!);
+		var engine = EnginePackage.Resolve(options);
 		// Before the executables, which can be downloaded.
-		CheckLength(dataPath, deleteDataPath);
-		var binaries = await ChromaLocalBinaries.ResolveAsync(options, cancellationToken).ConfigureAwait(false);
+		CheckLength(dataPath, deleteDataPath, engine?.MaxWindowsDataPathLength ?? DefaultMaxWindowsDataPathLength);
+		var binaries = await ChromaLocalBinaries.ResolveAsync(options, engine, cancellationToken).ConfigureAwait(false);
 		if (deleteDataPath)
 			DeleteAbandonedTemporaryData();
 		Directory.CreateDirectory(dataPath);
-		// Chroma does not stop a second server on the same data, and two servers that write the same files can damage them: a file of
-		// the directory, open without sharing while the server runs, stops a second ChromaLocalServer. The system closes it when this
+		// The server does not stop a second server on the same data, and two servers that write the same files can damage them: a file
+		// of the directory, open without sharing while the server runs, stops a second ChromaLocalServer. The system closes it when this
 		// process ends.
 		var dataLock = LockDataPath(dataPath);
 
-		// A free port can be taken by another process before Chroma binds it: Chroma then ends at once, and a new port is tried.
+		// A free port can be taken by another process before the server binds it: the server then ends at once, and a new port is tried.
 		const int MaxAttempts = 3;
 		for (var attempt = 1; ; attempt++)
 		{
@@ -191,11 +210,11 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	public ChromaClient CreateClient() => new(new ChromaConfigurationOptions(Uri));
 
 	/// <summary>
-	/// Stops Chroma, and waits until it has ended. On Linux and macOS Chroma gets SIGTERM, and SIGKILL after
+	/// Stops the server, and waits until it has ended. On Linux and macOS the server gets SIGTERM, and SIGKILL after
 	/// <see cref="ChromaLocalOptions.ShutdownTimeout"/>; on Windows it ends at once. The temporary data directory, when there is one,
 	/// is deleted. Calling it again returns the same stop.
 	/// </summary>
-	/// <param name="cancellationToken">Stops the wait; Chroma still stops.</param>
+	/// <param name="cancellationToken">Stops the wait; the server still stops.</param>
 	/// <returns>The stop.</returns>
 	public Task StopAsync(CancellationToken cancellationToken = default)
 	{
@@ -206,13 +225,13 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 	}
 
 	/// <summary>
-	/// Stops Chroma, as <see cref="StopAsync(CancellationToken)"/>.
+	/// Stops the server, as <see cref="StopAsync(CancellationToken)"/>.
 	/// </summary>
 	/// <returns>The stop.</returns>
 	public ValueTask DisposeAsync() => new(StopAsync());
 
 	/// <summary>
-	/// Stops Chroma, as <see cref="StopAsync(CancellationToken)"/>, and waits for it.
+	/// Stops the server, as <see cref="StopAsync(CancellationToken)"/>, and waits for it.
 	/// </summary>
 	public void Dispose() => StopAsync().GetAwaiter().GetResult();
 
@@ -224,14 +243,14 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 			? CreateStartInfo(binaries.GuardPath!, ["--grace-ms", ((long)options.ShutdownTimeout.TotalMilliseconds).ToString(System.Globalization.CultureInfo.InvariantCulture), "--", binaries.ChromaPath, .. chromaArgs])
 			: CreateStartInfo(binaries.ChromaPath, chromaArgs);
 		start.WorkingDirectory = dataPath;
-		// The guard stops Chroma when this pipe closes; Chroma itself gets /dev/null from the guard.
+		// The guard stops the server when this pipe closes; the server itself gets /dev/null from the guard.
 		start.RedirectStandardInput = guarded;
 		start.RedirectStandardOutput = true;
 		start.RedirectStandardError = true;
 		start.Environment["NO_COLOR"] = "1";
 
 		var process = new Process { StartInfo = start, EnableRaisingEvents = true };
-		var server = new ChromaLocalServer(process, binaries.ChromaPath, guarded, port, dataPath, deleteDataPath, options);
+		var server = new ChromaLocalServer(process, binaries, guarded, port, dataPath, deleteDataPath, options);
 		process.Exited += (_, _) => server._exited.TrySetResult(true);
 		try
 		{
@@ -260,7 +279,7 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		return server;
 	}
 
-	// The output of Chroma, read line by line on a thread of its own. On Windows the pipes of a child process are synchronous, and
+	// The output of the server, read line by line on a thread of its own. On Windows the pipes of a child process are synchronous, and
 	// BeginOutputReadLine reads them on a thread of the pool, blocked until the next line: two threads of the pool for each server, as
 	// long as it runs. With many servers the pool has no thread left for the start, which then waits for the pool to grow.
 	private void StartReader(StreamReader reader, bool isError, TaskCompletionSource<bool> ended)
@@ -286,7 +305,7 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		})
 		{
 			IsBackground = true,
-			Name = isError ? "Chroma standard error" : "Chroma standard output",
+			Name = isError ? "ChromaDotNet.Local standard error" : "ChromaDotNet.Local standard output",
 		};
 		thread.Start();
 	}
@@ -315,7 +334,7 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		{
 			if (_guarded && !Platform.IsWindows)
 				ProcessId = await WaitAsync(_childPid.Task, _exited.Task, token).ConfigureAwait(false);
-			// The line of Chroma that says it listens on our port: an answer on the port before it can come from another process.
+			// The line of the server that says it listens on our port: an answer on the port before it can come from another process.
 			await WaitAsync(_listening.Task, _exited.Task, token).ConfigureAwait(false);
 			using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
 			var heartbeat = new Uri(Uri, "/api/v2/heartbeat");
@@ -342,24 +361,24 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		}
 		catch (ExitedException)
 		{
-			// Chroma has ended: its last lines, like the one that says the port is taken, are read up to the end of its output.
+			// The server has ended: its last lines, like the one that says the port is taken, are read up to the end of its output.
 			await Task.WhenAny(Task.WhenAll(_outputEnded.Task, _errorEnded.Task), Task.Delay(TimeSpan.FromSeconds(2), CancellationToken.None)).ConfigureAwait(false);
-			// The guard ends at once with code 127 when it cannot execute Chroma; a Chroma already started keeps running when its file
-			// is deleted, so the code tells the two apart.
+			// The guard ends at once with code 127 when it cannot execute the server; a server already started keeps running when its
+			// file is deleted, so the code tells the two apart.
 			if (_guarded && ExitCodeOrUnknown() == "127" && !File.Exists(_chromaPath))
 				throw ExecutableDeleted(_chromaPath, null);
 			var log = RecentLog();
 			if (log.Contains($"127.0.0.1:{Port} is not available"))
 				throw new PortNotAvailableException($"Port {Port} on 127.0.0.1 is not available.");
-			throw new InvalidOperationException($"Chroma ended with code {ExitCodeOrUnknown()} before it answered. Its last lines:{Environment.NewLine}{log}");
+			throw new InvalidOperationException($"{_name} ended with code {ExitCodeOrUnknown()} before it answered. Its last lines:{Environment.NewLine}{log}");
 		}
 		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
 		{
-			throw new TimeoutException($"Chroma did not answer on {Uri} within {timeout.TotalSeconds} s. Its last lines:{Environment.NewLine}{RecentLog()}");
+			throw new TimeoutException($"{_name} did not answer on {Uri} within {timeout.TotalSeconds} s. Its last lines:{Environment.NewLine}{RecentLog()}");
 		}
 	}
 
-	// The result of the task, or ExitedException when Chroma ends first.
+	// The result of the task, or ExitedException when the server ends first.
 	private static async Task<T> WaitAsync<T>(Task<T> task, Task exited, CancellationToken token)
 	{
 		await WaitAsync((Task)task, exited, token).ConfigureAwait(false);
@@ -400,7 +419,7 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		{
 			if (_guarded)
 			{
-				// The guard sends SIGTERM to Chroma when its standard input closes, and SIGKILL after the grace time.
+				// The guard sends SIGTERM to the server when its standard input closes, and SIGKILL after the grace time.
 				try
 				{
 					_process.StandardInput.Close();
@@ -486,14 +505,14 @@ public sealed class ChromaLocalServer : IAsyncDisposable, IDisposable
 		}
 	}
 
-	private static void CheckLength(string dataPath, bool temporary)
+	private static void CheckLength(string dataPath, bool temporary, int maxLength)
 	{
 		var length = dataPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Length;
-		if (!Platform.IsWindows || length <= MaxWindowsDataPathLength)
+		if (!Platform.IsWindows || length <= maxLength)
 			return;
 		throw new PathTooLongException(temporary
-			? $"The temporary data directory {dataPath} has {length} characters, and on Windows Chroma works with at most {MaxWindowsDataPathLength}: set DataPath, or TEMP to a shorter directory."
-			: $"The DataPath {dataPath} has {length} characters, and on Windows Chroma works with at most {MaxWindowsDataPathLength}: set a shorter one.");
+			? $"The temporary data directory {dataPath} has {length} characters, and on Windows the server works with at most {maxLength}: set DataPath, or TEMP to a shorter directory."
+			: $"The DataPath {dataPath} has {length} characters, and on Windows the server works with at most {maxLength}: set a shorter one.");
 	}
 
 	private static FileNotFoundException ExecutableDeleted(string path, Exception? inner) =>

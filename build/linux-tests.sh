@@ -1,7 +1,8 @@
 #!/bin/bash
-# Usage: [MODE=bench|trace] build/linux-tests.sh <image> <short name> [x64|arm64]. In a container of the image: the tests of ChromaDotNet.Local and the
-# suite of the client against it, with the packages of artifacts/packages and the client of artifacts/client. The .NET SDK goes
-# into a volume shared by the images, with dotnet-install.sh.
+# Usage: [MODE=bench|trace] [CHROMA_LOCAL_ENGINE=ChromaDB|VecturaDB] build/linux-tests.sh <image> <short name> [x64|arm64]. In a
+# container of the image: the tests of ChromaDotNet.Local and the suite of the client against the engine of CHROMA_LOCAL_ENGINE,
+# ChromaDB by default, with the packages of artifacts/packages and the client of artifacts/client; bench and trace with that engine.
+# The .NET SDK goes into a volume shared by the images, with dotnet-install.sh.
 set -euo pipefail
 image=$1; short=$2; arch=${3:-x64}
 case "$arch" in x64) platform=linux/amd64 ;; arm64) platform=linux/arm64 ;; *) exit 2 ;; esac
@@ -11,7 +12,7 @@ export MSYS_NO_PATHCONV=1
 docker rm -f "$name" >/dev/null 2>&1 || true
 docker run --rm --name "$name" --platform "$platform" \
   -v "$root:/repo:ro" -v "chromadotnet-local-dotnet-$arch:/dotnet" -v "chromadotnet-local-nuget-$arch:/nuget" \
-  -e MODE="${MODE:-}" -e SYNC_FIRST="${SYNC_FIRST:-}" -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 -e DOTNET_CLI_TELEMETRY_OPTOUT=1 -e DOTNET_NOLOGO=1 \
+  -e MODE="${MODE:-}" -e SYNC_FIRST="${SYNC_FIRST:-}" -e CHROMA_LOCAL_ENGINE="${CHROMA_LOCAL_ENGINE:-ChromaDB}" -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 -e DOTNET_CLI_TELEMETRY_OPTOUT=1 -e DOTNET_NOLOGO=1 \
   "$image" bash -c '
 set -euo pipefail
 if command -v apt-get >/dev/null; then
@@ -55,7 +56,7 @@ if [ "${MODE:-}" = trace ]; then
   exit 0
 fi
 echo "== tests of ChromaDotNet.Local"
-dotnet test tests/ChromaDotNet.Local.Tests -c Release --no-build --logger "console;verbosity=normal" 2>&1 | grep -E "Total tests|^\s+Passed: |^\s+Failed: |^\s+Failed |Chroma gone" || true
+dotnet test tests/ChromaDotNet.Local.Tests -c Release --no-build --logger "console;verbosity=normal" 2>&1 | grep -E "Total tests|^\s+Passed: |^\s+Failed: |^\s+Failed |the server gone" || true
 echo "== suite of the client"
 bash build/client-suite.sh
 '

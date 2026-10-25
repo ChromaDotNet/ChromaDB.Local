@@ -4,6 +4,6 @@
 		<TargetFramework>net8.0</TargetFramework>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="ChromaDotNet.Local" Version="$(ChromaDotNetLocalVersion)" />
+		<PackageReference Include="ChromaDotNet.Local.ChromaDB" Version="$(ChromaDotNetLocalChromaDBVersion)" />
 	</ItemGroup>
 </Project>

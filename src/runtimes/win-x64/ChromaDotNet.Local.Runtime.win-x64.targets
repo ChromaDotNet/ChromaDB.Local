@@ -1,7 +1,0 @@
-<Project>
-	<!-- .NET Framework does not copy runtimes/<rid>/native/ of a package to the output: the Chroma executable goes there, where
-	     ChromaDotNet.Local looks for it. -->
-	<ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
-		<None Include="$(MSBuildThisFileDirectory)..\runtimes\win-x64\native\chroma.exe" Link="runtimes\win-x64\native\chroma.exe" CopyToOutputDirectory="PreserveNewest" Visible="false" />
-	</ItemGroup>
-</Project>

@@ -5,37 +5,39 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.Core", "src\ChromaDotNet.Local.Core\ChromaDotNet.Local.Core.csproj", "{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local", "src\ChromaDotNet.Local\ChromaDotNet.Local.csproj", "{C8535179-B458-4FC9-BA08-B69358DE183D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "runtimes", "runtimes", "{5D25CFC0-F50A-3F7D-3027-C4D02A8EAEC1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-arm64", "linux-arm64", "{EA927800-9C12-CD12-AB31-02C489947431}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.Runtime.linux-arm64", "src\runtimes\linux-arm64\ChromaDotNet.Local.Runtime.linux-arm64.csproj", "{D5FA605A-5DE5-43EF-92E8-2237BF6FB0DB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.ChromaDB.Runtime.linux-arm64", "src\runtimes\linux-arm64\ChromaDotNet.Local.ChromaDB.Runtime.linux-arm64.csproj", "{D5FA605A-5DE5-43EF-92E8-2237BF6FB0DB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-x64", "linux-x64", "{C1D9E079-90DA-32DC-0753-D7897DEAB29B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.Runtime.linux-x64", "src\runtimes\linux-x64\ChromaDotNet.Local.Runtime.linux-x64.csproj", "{94242FD7-FA23-48B3-BE3A-C230597FF981}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.ChromaDB.Runtime.linux-x64", "src\runtimes\linux-x64\ChromaDotNet.Local.ChromaDB.Runtime.linux-x64.csproj", "{94242FD7-FA23-48B3-BE3A-C230597FF981}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "osx-arm64", "osx-arm64", "{0B595F0D-EB5F-8847-8D09-28F35D9B1308}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.Runtime.osx-arm64", "src\runtimes\osx-arm64\ChromaDotNet.Local.Runtime.osx-arm64.csproj", "{D9CE65ED-BE14-4120-8D70-2C2FE5FFE0F1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.ChromaDB.Runtime.osx-arm64", "src\runtimes\osx-arm64\ChromaDotNet.Local.ChromaDB.Runtime.osx-arm64.csproj", "{D9CE65ED-BE14-4120-8D70-2C2FE5FFE0F1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "osx-x64", "osx-x64", "{23D64858-362A-C926-1B44-928FA51A862B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.Runtime.osx-x64", "src\runtimes\osx-x64\ChromaDotNet.Local.Runtime.osx-x64.csproj", "{531BDE35-9034-4CF5-BE85-B1E963465124}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.ChromaDB.Runtime.osx-x64", "src\runtimes\osx-x64\ChromaDotNet.Local.ChromaDB.Runtime.osx-x64.csproj", "{531BDE35-9034-4CF5-BE85-B1E963465124}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "win-x64", "win-x64", "{FA9FE4E6-E080-E44C-CF78-B759C4535FE4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.Runtime.win-x64", "src\runtimes\win-x64\ChromaDotNet.Local.Runtime.win-x64.csproj", "{EA83D134-3E9D-42FB-ABF9-4B20897C6318}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.ChromaDB.Runtime.win-x64", "src\runtimes\win-x64\ChromaDotNet.Local.ChromaDB.Runtime.win-x64.csproj", "{EA83D134-3E9D-42FB-ABF9-4B20897C6318}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.TestHost", "tests\ChromaDotNet.Local.TestHost\ChromaDotNet.Local.TestHost.csproj", "{8BF8E33E-565D-4957-AA50-D0B64404D69B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.Tests", "tests\ChromaDotNet.Local.Tests\ChromaDotNet.Local.Tests.csproj", "{0A6E95E1-E7D0-47E5-806E-BA6472EC23EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.ChromaDB", "src\ChromaDotNet.Local.ChromaDB\ChromaDotNet.Local.ChromaDB.csproj", "{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChromaDotNet.Local.VecturaDB", "src\ChromaDotNet.Local.VecturaDB\ChromaDotNet.Local.VecturaDB.csproj", "{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,18 +49,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Debug|x64.Build.0 = Debug|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Debug|x86.Build.0 = Debug|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Release|x64.ActiveCfg = Release|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Release|x64.Build.0 = Release|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Release|x86.ActiveCfg = Release|Any CPU
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D}.Release|x86.Build.0 = Release|Any CPU
 		{C8535179-B458-4FC9-BA08-B69358DE183D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C8535179-B458-4FC9-BA08-B69358DE183D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C8535179-B458-4FC9-BA08-B69358DE183D}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -155,12 +145,35 @@ Global
 		{0A6E95E1-E7D0-47E5-806E-BA6472EC23EF}.Release|x64.Build.0 = Release|Any CPU
 		{0A6E95E1-E7D0-47E5-806E-BA6472EC23EF}.Release|x86.ActiveCfg = Release|Any CPU
 		{0A6E95E1-E7D0-47E5-806E-BA6472EC23EF}.Release|x86.Build.0 = Release|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Debug|x64.Build.0 = Debug|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Debug|x86.Build.0 = Debug|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Release|x64.ActiveCfg = Release|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Release|x64.Build.0 = Release|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Release|x86.ActiveCfg = Release|Any CPU
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF}.Release|x86.Build.0 = Release|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Debug|x64.Build.0 = Debug|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Debug|x86.Build.0 = Debug|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Release|x64.ActiveCfg = Release|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Release|x64.Build.0 = Release|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Release|x86.ActiveCfg = Release|Any CPU
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{0EF1B6DD-1104-4EAA-89F6-8D847367D13D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{C8535179-B458-4FC9-BA08-B69358DE183D} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{5D25CFC0-F50A-3F7D-3027-C4D02A8EAEC1} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{EA927800-9C12-CD12-AB31-02C489947431} = {5D25CFC0-F50A-3F7D-3027-C4D02A8EAEC1}
@@ -175,5 +188,7 @@ Global
 		{EA83D134-3E9D-42FB-ABF9-4B20897C6318} = {FA9FE4E6-E080-E44C-CF78-B759C4535FE4}
 		{8BF8E33E-565D-4957-AA50-D0B64404D69B} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{0A6E95E1-E7D0-47E5-806E-BA6472EC23EF} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{C49811F8-0F72-4FDE-8845-4CCA0BE06DDF} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{F985D5F7-9B81-4D9B-9F67-56A62F5D4FF4} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

@@ -2,8 +2,10 @@
 	<Import Project="..\Directory.Build.props" />
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>
-		<!-- The tests use the packages of artifacts/packages, as an application does. -->
-		<ChromaDotNetLocalVersion>$(VersionPrefix)-$(VersionSuffix)</ChromaDotNetLocalVersion>
+		<!-- The tests use the packages of artifacts/packages, as an application does: the base and the two engines. -->
+		<ChromaDotNetLocalVersion>$(LocalVersion)</ChromaDotNetLocalVersion>
+		<ChromaDotNetLocalChromaDBVersion>$(ChromaDBVersion)</ChromaDotNetLocalChromaDBVersion>
+		<ChromaDotNetLocalVecturaDBVersion>$(VecturaDBVersion)</ChromaDotNetLocalVecturaDBVersion>
 		<GenerateDocumentationFile>false</GenerateDocumentationFile>
 	</PropertyGroup>
 </Project>
