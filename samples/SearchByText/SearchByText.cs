@@ -1,4 +1,4 @@
-#:package ChromaDotNet.Local@1.5.9.1-preview.5
+#:package ChromaDotNet.Local.ChromaDB@1.5.9.1-preview.6
 #:package ChromaDotNet.Client@2.17.0
 #:package ChromaDotNet.Embeddings@1.0.0-preview.3
 #:property PublishAot=false
@@ -11,7 +11,7 @@ using ChromaDotNet.Local;
 // As chromadb.PersistentClient(path="chroma-data") in Python: Chroma on this machine, with the data in chroma-data of the current
 // directory, and the default embedding function of Chroma. No Docker, no Python.
 await using var chroma = await ChromaLocalServer.StartAsync(new() { DataPath = "chroma-data" });
-Console.WriteLine($"Chroma {ChromaLocalServer.ChromaVersion}, data in {chroma.DataPath}");
+Console.WriteLine($"Chroma {chroma.EngineVersion}, data in {chroma.DataPath}");
 
 // all-MiniLM-L6-v2, the model of Python: the first run downloads it, 83 MB, into the cache Python uses too.
 using var embeddings = await ChromaDefaultEmbeddingGenerator.CreateAsync();
