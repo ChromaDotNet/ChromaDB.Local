@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using NUnit.Framework;
 
@@ -9,6 +10,12 @@ namespace ChromaDotNet.Local.Tests;
 [TestFixture]
 public class ExecutableCacheTests
 {
+	// A platform the engines have executables for, as their packages are built with all of them.
+	private const string Rid = "linux-x64";
+
+	private static readonly EnginePackage ChromaDB = EnginePackage.Find(ChromaLocalEngine.ChromaDB)!;
+	private static readonly EnginePackage VecturaDB = EnginePackage.Find(ChromaLocalEngine.VecturaDB)!;
+
 	private string _root = null!;
 
 	[SetUp]
@@ -56,7 +63,7 @@ public class ExecutableCacheTests
 		var file = Path.Combine(_root, "a-file");
 		File.WriteAllText(file, "");
 		var options = new ChromaLocalOptions { CacheDirectory = Path.Combine(file, "cache") };
-		var e = Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
+		var e = Assert.CatchAsync(() => ExecutableCache.GetEngineAsync(ChromaDB, Rid, options, CancellationToken.None));
 		Assert.That(e, Is.TypeOf<IOException>(), e!.ToString());
 		Assert.That(e.Message, Does.Contain(file));
 	}
@@ -66,14 +73,14 @@ public class ExecutableCacheTests
 	[Test]
 	public void LeftoversOfInterruptedDownloadsAreDeleted()
 	{
-		var directory = Path.Combine(_root, ExecutableCache.ReleaseTag, ExecutableCacheTestRid());
+		var directory = Path.Combine(_root, ChromaDB.CacheName, Rid);
 		Directory.CreateDirectory(directory);
-		var leftover = Path.Combine(directory, "chroma." + Guid.NewGuid().ToString("N") + ".tmp");
+		var leftover = Path.Combine(directory, ChromaDB.ExecutableName(Rid) + "." + Guid.NewGuid().ToString("N") + ".tmp");
 		var other = Path.Combine(directory, "notes.tmp");
 		File.WriteAllText(leftover, "partial");
 		File.WriteAllText(other, "");
 		var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadExecutable = false };
-		Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
+		Assert.CatchAsync(() => ExecutableCache.GetEngineAsync(ChromaDB, Rid, options, CancellationToken.None));
 		Assert.That(File.Exists(leftover), Is.False, "leftover of a download");
 		Assert.That(File.Exists(other), Is.True, "another file");
 	}
@@ -82,24 +89,76 @@ public class ExecutableCacheTests
 	[Test]
 	public void DirectoryInPlaceOfTheExecutable()
 	{
-		var directory = Path.Combine(_root, ExecutableCache.ReleaseTag, ExecutableCacheTestRid(), "chroma");
+		var directory = Path.Combine(_root, ChromaDB.CacheName, Rid, ChromaDB.ExecutableName(Rid)!);
 		Directory.CreateDirectory(directory);
 		var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadUri = new Uri("http://127.0.0.1:1/") };
-		var e = Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
+		var e = Assert.CatchAsync(() => ExecutableCache.GetEngineAsync(ChromaDB, Rid, options, CancellationToken.None));
 		Assert.That(e, Is.TypeOf<IOException>(), e!.ToString());
 		Assert.That(e.Message, Does.Contain(directory).And.Contain("delete it"));
 	}
 
-	// A download that fails with an error whose message ends with a period, here a file that is not gzip: one period, not two.
+	// Each engine has its directory of the cache, of its version: two engines, or two versions of one, do not share their files.
+	[Test]
+	public void EachEngineHasItsDirectory()
+	{
+		Assert.That(ChromaDB.CacheName, Is.EqualTo("chromadb-v" + TestMetadata.Value("ChromaDBVersion")));
+		Assert.That(VecturaDB.CacheName, Is.EqualTo("vecturadb-" + TestMetadata.Value("VecturaDBTag")));
+		Assert.That(ExecutableCache.BaseCacheName, Is.EqualTo("v" + TestMetadata.Value("LocalVersion")));
+	}
+
+	// A download of Chroma that fails with an error whose message ends with a period, here a file that is not gzip: one period, not
+	// two; and what to do without the network, with the property that takes the executables of the runtime packages out.
 	[Test]
 	public async Task DownloadErrorWithOnePeriod()
 	{
+		var (uri, served) = ServeOnce(Encoding.ASCII.GetBytes("this is not gzip"));
+		var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadUri = uri };
+		var e = Assert.CatchAsync(() => ExecutableCache.GetEngineAsync(ChromaDB, Rid, options, CancellationToken.None));
+		// An error before the request leaves the server waiting: the timeout of the wait ends it.
+		await served.WaitAsync(TimeSpan.FromSeconds(10));
+		Assert.That(e, Is.TypeOf<InvalidOperationException>(), e!.ToString());
+		Assert.That(e.InnerException!.Message, Does.EndWith("."), "the case of the test");
+		Assert.That(e.Message, Does.Contain(e.InnerException.Message).And.Not.Contain(".."));
+		Assert.That(e.Message, Does.StartWith($"Could not download the Chroma executable for {Rid} from {uri}chromadb-{Rid}.gz"));
+		Assert.That(e.Message, Does.Contain("ChromaDotNetLocalChromaDBDownload"));
+	}
+
+	// The files of the release of VecturaDB are the executables, not compressed: the download takes the bytes as they are, and checks
+	// their hash.
+	[Test]
+	public async Task DownloadOfVecturaDBIsNotDecompressed()
+	{
+		var bytes = Encoding.ASCII.GetBytes("this is not gzip");
+		var (uri, served) = ServeOnce(bytes);
+		var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadUri = uri };
+		var e = Assert.CatchAsync(() => ExecutableCache.GetEngineAsync(VecturaDB, Rid, options, CancellationToken.None));
+		await served.WaitAsync(TimeSpan.FromSeconds(10));
+		Assert.That(e, Is.TypeOf<InvalidDataException>(), e!.ToString());
+		Assert.That(e.Message, Does.Contain($"{uri}{VecturaDB.AssetName(Rid)}").And.Contain(Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant()));
+		Assert.That(Directory.GetFiles(Path.Combine(_root, VecturaDB.CacheName, Rid), VecturaDB.ExecutableName(Rid) + "*"), Is.Empty, "nothing kept");
+	}
+
+	// Without the network, VecturaDB has no runtime package: the message says the mirror and ExecutablePath.
+	[Test]
+	public void DownloadErrorOfVecturaDB()
+	{
+		var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadUri = new Uri("http://127.0.0.1:1/") };
+		var e = Assert.CatchAsync(() => ExecutableCache.GetEngineAsync(VecturaDB, Rid, options, CancellationToken.None));
+		Assert.That(e, Is.TypeOf<InvalidOperationException>(), e!.ToString());
+		Assert.That(e.Message, Does.StartWith($"Could not download the VecturaDB executable for {Rid} from http://127.0.0.1:1/{VecturaDB.AssetName(Rid)}"));
+		Assert.That(e.Message, Does.Contain($"DownloadUri to a mirror with the files of {VecturaDB.ReleaseUri}").And.Contain("ExecutablePath")
+			.And.Not.Contain("runtime packages"));
+	}
+
+	// An HTTP server on 127.0.0.1 that answers one request with the bytes, and its address.
+	private static (Uri Uri, Task Served) ServeOnce(byte[] body)
+	{
 		var listener = new TcpListener(IPAddress.Loopback, 0);
 		listener.Start();
-		try
+		var uri = new Uri($"http://127.0.0.1:{((IPEndPoint)listener.LocalEndpoint).Port}/");
+		var served = Task.Run(async () =>
 		{
-			var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-			var serve = Task.Run(async () =>
+			try
 			{
 				using var client = await listener.AcceptTcpClientAsync();
 				var stream = client.GetStream();
@@ -107,22 +166,14 @@ public class ExecutableCacheTests
 				var received = "";
 				while (!received.Contains("\r\n\r\n", StringComparison.Ordinal))
 					received += Encoding.ASCII.GetString(request, 0, await stream.ReadAsync(request));
-				await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Length: 16\r\nConnection: close\r\n\r\nthis is not gzip"));
-			});
-			var options = new ChromaLocalOptions { CacheDirectory = _root, DownloadUri = new Uri($"http://127.0.0.1:{port}/") };
-			var e = Assert.CatchAsync(() => ExecutableCache.GetAsync(ExecutableCacheTestRid(), ["chroma"], options, CancellationToken.None));
-			// An error before the request leaves the server waiting: the finally stops it.
-			await serve.WaitAsync(TimeSpan.FromSeconds(10));
-			Assert.That(e, Is.TypeOf<InvalidOperationException>(), e!.ToString());
-			Assert.That(e.InnerException!.Message, Does.EndWith("."), "the case of the test");
-			Assert.That(e.Message, Does.Contain(e.InnerException.Message).And.Not.Contain(".."));
-		}
-		finally
-		{
-			listener.Stop();
-		}
+				await stream.WriteAsync(Encoding.ASCII.GetBytes($"HTTP/1.1 200 OK\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n"));
+				await stream.WriteAsync(body);
+			}
+			finally
+			{
+				listener.Stop();
+			}
+		});
+		return (uri, served);
 	}
-
-	// A platform this build has hashes for, as the package is built with all of them.
-	private static string ExecutableCacheTestRid() => "linux-x64";
 }

@@ -1,24 +1,72 @@
 <Project Sdk="Microsoft.NET.Sdk">
-	<!-- ChromaDotNet.Local: no code of its own, a dependency on ChromaDotNet.Local.Core and on the runtime package of each platform, as
-	     Microsoft.ML.OnnxRuntime and the bundles of SQLitePCLRaw do. For one platform only: ChromaDotNet.Local.Core and that runtime. -->
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
 		<IsPackable>true</IsPackable>
+		<!-- The analyzers of trimming and NativeAOT run on the target that has them. -->
+		<IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">true</IsAotCompatible>
 		<PackageId>ChromaDotNet.Local</PackageId>
-		<IncludeBuildOutput>false</IncludeBuildOutput>
-		<GenerateDocumentationFile>false</GenerateDocumentationFile>
-		<!-- NU5128: no lib folder, on purpose. -->
-		<NoWarn>$(NoWarn);NU5128</NoWarn>
+		<AssemblyName>ChromaDotNet.Local</AssemblyName>
+		<RootNamespace>ChromaDotNet.Local</RootNamespace>
+		<PackageDescription>The base of ChromaDotNet.Local, without an engine: ChromaLocalServer.StartAsync starts the server of an engine package as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. Add an engine: ChromaDotNet.Local.ChromaDB for Chroma, or ChromaDotNet.Local.VecturaDB for VecturaDB. Community project, not affiliated with Chroma.</PackageDescription>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageDescription>Chroma $(ChromaVersion) on this machine, without Docker and without Python, for ChromaDotNet.Client: ChromaLocalServer.StartAsync starts the executable of the Chroma CLI as a child process on 127.0.0.1, and stops it with Dispose or when the application ends. With the executables for Windows x64, Linux x64 and arm64 (glibc 2.28 and later), macOS x64 and arm64; for one platform only, ChromaDotNet.Local.Core and the ChromaDotNet.Local.Runtime package of that platform. Community project, not affiliated with Chroma.</PackageDescription>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<!-- RS0026 and RS0027: overloads with optional parameters, as in the client. -->
+		<NoWarn>$(NoWarn);RS0026;RS0027</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
-		<!-- build/pack.sh packs these first, into artifacts/packages. -->
-		<PackageReference Include="ChromaDotNet.Local.Core" Version="$(Version)" PrivateAssets="none" />
-		<PackageReference Include="ChromaDotNet.Local.Runtime.win-x64" Version="$(Version)" PrivateAssets="none" />
-		<PackageReference Include="ChromaDotNet.Local.Runtime.linux-x64" Version="$(Version)" PrivateAssets="none" />
-		<PackageReference Include="ChromaDotNet.Local.Runtime.linux-arm64" Version="$(Version)" PrivateAssets="none" />
-		<PackageReference Include="ChromaDotNet.Local.Runtime.osx-x64" Version="$(Version)" PrivateAssets="none" />
-		<PackageReference Include="ChromaDotNet.Local.Runtime.osx-arm64" Version="$(Version)" PrivateAssets="none" />
+		<!-- The directory of the cache for the copies of the guard, for a user that cannot execute the guard of the package. -->
+		<AssemblyMetadata Include="ChromaDotNet.Local.CacheName" Value="v$(Version)" />
+		<InternalsVisibleTo Include="ChromaDotNet.Local.Tests" />
+	</ItemGroup>
+	<ItemGroup>
+		<!-- The public API, checked at build, as in the client. -->
+		<PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
+		<PackageReference Include="ChromaDotNet.Client" Version="2.14.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
+	</ItemGroup>
+	<!-- The guard of Linux and macOS, in runtimes/<rid>/native/ of the package, from artifacts/stage/guard/, where build/stage.sh puts
+	     it under the name of the base. Its SHA-256 hash goes into the assembly as AssemblyMetadata ChromaDotNet.Local.Guard:<rid>: a copy
+	     into the cache of a user who cannot execute the file of the package is checked against it. A file that is not there has no
+	     hash; -p:RequireExecutableHashes=true, as build/pack.sh passes, makes that an error. -->
+	<PropertyGroup>
+		<GuardStage>$(MSBuildThisFileDirectory)..\..\artifacts\stage\guard\</GuardStage>
+	</PropertyGroup>
+	<ItemGroup>
+		<GuardFile Include="$(GuardStage)linux-x64\chromadotnet-local-guard" Rid="linux-x64" />
+		<GuardFile Include="$(GuardStage)linux-arm64\chromadotnet-local-guard" Rid="linux-arm64" />
+		<GuardFile Include="$(GuardStage)osx-x64\chromadotnet-local-guard" Rid="osx-x64" />
+		<GuardFile Include="$(GuardStage)osx-arm64\chromadotnet-local-guard" Rid="osx-arm64" />
+		<!-- The folders of PackagePath without a slash at the end: on Linux "native\" gives "native//..." in the package. -->
+		<None Include="$(GuardStage)linux-x64\chromadotnet-local-guard" Condition="Exists('$(GuardStage)linux-x64\chromadotnet-local-guard')" Pack="true" PackagePath="runtimes/linux-x64/native" Visible="false" />
+		<None Include="$(GuardStage)linux-arm64\chromadotnet-local-guard" Condition="Exists('$(GuardStage)linux-arm64\chromadotnet-local-guard')" Pack="true" PackagePath="runtimes/linux-arm64/native" Visible="false" />
+		<None Include="$(GuardStage)osx-x64\chromadotnet-local-guard" Condition="Exists('$(GuardStage)osx-x64\chromadotnet-local-guard')" Pack="true" PackagePath="runtimes/osx-x64/native" Visible="false" />
+		<None Include="$(GuardStage)osx-arm64\chromadotnet-local-guard" Condition="Exists('$(GuardStage)osx-arm64\chromadotnet-local-guard')" Pack="true" PackagePath="runtimes/osx-arm64/native" Visible="false" />
+		<!-- The pack of a project with two targets takes the items of the outer build, which has no default items: an Include, after
+		     the Remove of the default item of the inner builds. -->
+		<None Remove="buildTransitive\**" />
+		<None Include="buildTransitive\ChromaDotNet.Local.targets" Pack="true" PackagePath="buildTransitive/ChromaDotNet.Local.targets" />
+	</ItemGroup>
+	<Target Name="AddGuardHashes" BeforeTargets="GetAssemblyAttributes">
+		<ItemGroup>
+			<_GuardFound Include="@(GuardFile)" Condition="Exists('%(FullPath)')" />
+			<_GuardMissing Include="@(GuardFile)" Condition="!Exists('%(FullPath)')" />
+		</ItemGroup>
+		<Error Condition="'$(RequireExecutableHashes)' == 'true' And '@(_GuardMissing)' != ''" Text="No guard for the hash: @(_GuardMissing). Run build/stage.sh." />
+		<GetFileHash Files="@(_GuardFound)" Algorithm="SHA256" HashEncoding="hex" Condition="'@(_GuardFound)' != ''">
+			<Output TaskParameter="Items" ItemName="_GuardHashed" />
+		</GetFileHash>
+		<ItemGroup>
+			<AssemblyMetadata Include="ChromaDotNet.Local.Guard:%(_GuardHashed.Rid)" Value="%(_GuardHashed.FileHash)" />
+		</ItemGroup>
+	</Target>
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<!-- IAsyncDisposable and ValueTask come from Microsoft.Bcl.AsyncInterfaces, which ChromaDotNet.Client brings in the version of
+		     each of its targets: a reference here would downgrade it on .NET Framework. -->
+		<PackageReference Include="PolySharp" Version="1.14.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 </Project>

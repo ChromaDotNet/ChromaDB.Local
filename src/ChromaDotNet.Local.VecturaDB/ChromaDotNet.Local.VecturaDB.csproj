@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<!-- The engine VecturaDB: an assembly with no code, whose AssemblyMetadata describe the engine to the base (EnginePackage), and a
+	     dependency on the base. No runtime package: the first start downloads the executable of its platform from the GitHub release
+	     of VecturaDB, with the hashes of VecturaDB.props. build/pack.sh packs the base first, into artifacts/packages. -->
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<IsPackable>true</IsPackable>
+		<PackageId>ChromaDotNet.Local.VecturaDB</PackageId>
+		<Version>$(VecturaDBVersion)</Version>
+		<RootNamespace>ChromaDotNet.Local.VecturaDB</RootNamespace>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageTags>$(PackageTags) vecturadb</PackageTags>
+		<PackageDescription>VecturaDB $(VecturaDBEngineVersion) for ChromaDotNet.Local: ChromaLocalServer.StartAsync starts the VecturaDB executable as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. VecturaDB is a vector database compatible with the Chroma API, bringing Chroma Cloud's features to open source: sparse vectors, BM25 and the Search API. The first start downloads the executable of its platform from the GitHub release of VecturaDB, for Windows x64, Linux x64 and arm64, macOS x64 and arm64, and checks its SHA-256 hash. Community project, not affiliated with Chroma.</PackageDescription>
+	</PropertyGroup>
+	<Import Project="VecturaDB.props" />
+	<ItemGroup>
+		<PackageReference Include="ChromaDotNet.Local" Version="[$(LocalVersion), 2.0.0-0)" PrivateAssets="none" />
+		<None Update="buildTransitive\ChromaDotNet.Local.VecturaDB.targets" Pack="true" PackagePath="buildTransitive/ChromaDotNet.Local.VecturaDB.targets" />
+		<!-- The notices of VecturaDB at the tag of the release, which build/vecturadb-notices.sh writes before the pack. -->
+		<None Include="$(MSBuildThisFileDirectory)..\..\artifacts\vecturadb\THIRD-PARTY-NOTICES.md" Condition="Exists('$(MSBuildThisFileDirectory)..\..\artifacts\vecturadb\THIRD-PARTY-NOTICES.md')" Pack="true" PackagePath="\" Visible="false" />
+	</ItemGroup>
+	<!-- The description of the engine for the base: keys with the prefix ChromaDotNet.Local., read by EnginePackage of the base. -->
+	<ItemGroup>
+		<AssemblyMetadata Include="ChromaDotNet.Local.Engine" Value="VecturaDB" />
+		<AssemblyMetadata Include="ChromaDotNet.Local.EngineVersion" Value="$(VecturaDBEngineVersion)" />
+		<AssemblyMetadata Include="ChromaDotNet.Local.ReleaseUri" Value="https://github.com/VecturaDB/VecturaDB/releases/download/$(VecturaDBTag)/" />
+		<AssemblyMetadata Include="ChromaDotNet.Local.CacheName" Value="vecturadb-$(VecturaDBTag)" />
+		<!-- On Windows, the longest data path with which VecturaDB writes the index of a collection, measured with this version: with
+		     201 characters its first write fails, in the compaction of the index. -->
+		<AssemblyMetadata Include="ChromaDotNet.Local.MaxWindowsDataPathLength" Value="200" />
+	</ItemGroup>
+	<Target Name="AddVecturaDBExecutables" BeforeTargets="GetAssemblyAttributes">
+		<ItemGroup>
+			<AssemblyMetadata Include="ChromaDotNet.Local.Executable:%(VecturaDBExecutable.Identity)" Value="%(VecturaDBExecutable.ExecutableName)" />
+			<AssemblyMetadata Include="ChromaDotNet.Local.Asset:%(VecturaDBExecutable.Identity)" Value="%(VecturaDBExecutable.Asset)" />
+			<AssemblyMetadata Include="ChromaDotNet.Local.Sha256:%(VecturaDBExecutable.Identity)" Value="%(VecturaDBExecutable.Sha256)" />
+		</ItemGroup>
+	</Target>
+	<Target Name="RequireVecturaDBNotices" BeforeTargets="GenerateNuspec" Condition="'$(RequireNotices)' == 'true'">
+		<Error Condition="!Exists('$(MSBuildThisFileDirectory)..\..\artifacts\vecturadb\THIRD-PARTY-NOTICES.md')" Text="Missing artifacts/vecturadb/THIRD-PARTY-NOTICES.md: run build/vecturadb-notices.sh." />
+	</Target>
+</Project>

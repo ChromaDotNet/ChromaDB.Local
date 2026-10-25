@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>
 		<!-- The samples use the packages of artifacts/packages, as an application does once they are on NuGet. -->
-		<ChromaDotNetLocalVersion>$(VersionPrefix)-$(VersionSuffix)</ChromaDotNetLocalVersion>
+		<ChromaDotNetLocalChromaDBVersion>$(ChromaDBVersion)</ChromaDotNetLocalChromaDBVersion>
 		<GenerateDocumentationFile>false</GenerateDocumentationFile>
 	</PropertyGroup>
 </Project>

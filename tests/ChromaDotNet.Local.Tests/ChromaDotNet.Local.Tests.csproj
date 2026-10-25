@@ -5,7 +5,11 @@
 		<TestHostDirectory>$(MSBuildThisFileDirectory)..\ChromaDotNet.Local.TestHost\bin\$(Configuration)\net8.0\</TestHostDirectory>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="ChromaDotNet.Local" Version="$(ChromaDotNetLocalVersion)" />
+		<!-- The two engines, as an application that has both: each test chooses one with ChromaLocalOptions.Engine. -->
+		<PackageReference Include="ChromaDotNet.Local.ChromaDB" Version="$(ChromaDotNetLocalChromaDBVersion)" />
+		<PackageReference Include="ChromaDotNet.Local.VecturaDB" Version="$(ChromaDotNetLocalVecturaDBVersion)" />
+		<!-- The Search API, sparse vectors and BM25, for the tests of VecturaDB. -->
+		<PackageReference Include="ChromaDotNet.Client" Version="2.18.0" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
 		<PackageReference Include="NUnit" Version="4.1.0" />
 		<PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
@@ -17,5 +21,10 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ChromaDotNet.Local.TestHost\ChromaDotNet.Local.TestHost.csproj" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=net8.0" />
 		<AssemblyMetadata Include="TestHostDirectory" Value="$(TestHostDirectory)" />
+		<!-- The version of the base, and what the engine packages say of themselves, from Directory.Build.props. -->
+		<AssemblyMetadata Include="LocalVersion" Value="$(LocalVersion)" />
+		<AssemblyMetadata Include="ChromaVersion" Value="$(ChromaVersion)" />
+		<AssemblyMetadata Include="ChromaDBVersion" Value="$(ChromaDBVersion)" />
+		<AssemblyMetadata Include="VecturaDBTag" Value="$(VecturaDBTag)" />
 	</ItemGroup>
 </Project>

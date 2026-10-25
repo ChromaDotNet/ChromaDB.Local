@@ -1,12 +1,24 @@
 <Project>
 	<PropertyGroup>
-		<!-- The version of Chroma in the binaries, and the revision of these packages for that version: 1.5.9.1 is the first. -->
+		<!-- Three lines of versions, one for each package of its own and the packages that follow it, each with a tag of its own. -->
+		<!-- ChromaDotNet.Local, the base without an engine: tags v<version>. -->
+		<LocalVersion>1.5.9.1-preview.6</LocalVersion>
+		<!-- ChromaDotNet.Local.ChromaDB and its runtime packages: the version of Chroma in the executables, then the revision of these
+		     packages for that version; tags chromadb-v<version>. -->
 		<ChromaVersion>1.5.9</ChromaVersion>
 		<ChromaCliTag>cli-1.4.4</ChromaCliTag>
 		<ChromaCliCommit>11f3c7435e71024aa0a2b53710a28d3289d922d1</ChromaCliCommit>
-		<PackageRevision>1</PackageRevision>
-		<VersionPrefix>$(ChromaVersion).$(PackageRevision)</VersionPrefix>
-		<VersionSuffix>preview.5</VersionSuffix>
+		<ChromaDBRevision>1</ChromaDBRevision>
+		<ChromaDBSuffix>preview.6</ChromaDBSuffix>
+		<ChromaDBVersion>$(ChromaVersion).$(ChromaDBRevision)-$(ChromaDBSuffix)</ChromaDBVersion>
+		<!-- ChromaDotNet.Local.VecturaDB: the version of VecturaDB, from the tag of its release, then the revision of the package for that
+		     version, as 1.0.0-preview.2.1, or 1.0.0.1 for a stable VecturaDB; tags vecturadb-v<version>. -->
+		<VecturaDBTag>v1.0.0-preview.2</VecturaDBTag>
+		<VecturaDBEngineVersion>$(VecturaDBTag.TrimStart('v'))</VecturaDBEngineVersion>
+		<VecturaDBRevision>1</VecturaDBRevision>
+		<VecturaDBVersion>$(VecturaDBEngineVersion).$(VecturaDBRevision)</VecturaDBVersion>
+		<!-- The packages of the base take its version; each engine project sets its own. -->
+		<Version>$(LocalVersion)</Version>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>

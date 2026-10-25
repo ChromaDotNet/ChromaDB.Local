@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<ChromaRid>linux-x64</ChromaRid>
-		<ChromaSource>linux</ChromaSource>
+		<ChromaRid>linux-arm64</ChromaRid>
 		<ChromaSourceDescription>built from the tag $(ChromaCliTag) of Chroma, with no change to the code, on manylinux_2_28 (glibc 2.28 and later), without debug information.</ChromaSourceDescription>
 	</PropertyGroup>
 	<Import Project="..\Runtime.props" />

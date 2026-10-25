@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<ChromaRid>osx-arm64</ChromaRid>
-		<ChromaSource>chroma-cli</ChromaSource>
+		<ChromaRid>win-x64</ChromaRid>
 		<ChromaSourceDescription>the executable of the GitHub release of the Chroma CLI $(ChromaCliTag), checked against the SHA-256 digest of its GitHub release.</ChromaSourceDescription>
 	</PropertyGroup>
 	<Import Project="..\Runtime.props" />

@@ -1,0 +1,23 @@
+<Project>
+	<!-- ChromaDotNet.Local has no engine of its own. An application, or a project of tests, that references no engine package gets a
+	     warning at build, before ChromaLocalServer.StartAsync fails for the same reason. A library can depend on the base alone and leave
+	     the engine to the application, so it gets no warning. <ChromaDotNetLocalNoEngineWarning>false</ChromaDotNetLocalNoEngineWarning>
+	     turns the warning off. -->
+	<Target Name="ChromaDotNetLocalCheckEngine" AfterTargets="ResolveAssemblyReferences"
+		Condition="'$(ChromaDotNetLocalNoEngineWarning)' != 'false' And ('$(OutputType)' == 'Exe' Or '$(OutputType)' == 'WinExe' Or '$(IsTestProject)' == 'true')">
+		<ItemGroup>
+			<_ChromaDotNetLocalEngine Include="@(ReferencePath)" Condition="'%(Filename)' == 'ChromaDotNet.Local.ChromaDB' Or '%(Filename)' == 'ChromaDotNet.Local.VecturaDB'" />
+		</ItemGroup>
+		<Warning Condition="'@(_ChromaDotNetLocalEngine)' == ''" Code="CDNL001"
+			Text="ChromaDotNet.Local has no engine: add the package ChromaDotNet.Local.ChromaDB for Chroma, or ChromaDotNet.Local.VecturaDB for VecturaDB. Without one, ChromaLocalServer.StartAsync fails, unless ChromaLocalOptions.ExecutablePath names an executable." />
+	</Target>
+	<!-- ChromaDotNet.Local.Core of 1.5.9.1-preview.5 has a ChromaDotNet.Local.dll with the same assembly and file version as the one of
+	     the base. Left in an application next to an engine package, the conflict of the two files goes to the base: it is among the
+	     packages that the SDK prefers in a conflict, which ResolveTargetingPackAssets sets. -->
+	<Target Name="ChromaDotNetLocalPreferTheBase" AfterTargets="ResolveTargetingPackAssets">
+		<PropertyGroup>
+			<PackageConflictPreferredPackages Condition="'$(PackageConflictPreferredPackages)' != ''">$(PackageConflictPreferredPackages);ChromaDotNet.Local</PackageConflictPreferredPackages>
+			<PackageConflictPreferredPackages Condition="'$(PackageConflictPreferredPackages)' == ''">ChromaDotNet.Local</PackageConflictPreferredPackages>
+		</PropertyGroup>
+	</Target>
+</Project>

@@ -7,16 +7,22 @@
 		<!-- -p:Aot=true publishes the .NET 8 build with NativeAOT, to check that ChromaDotNet.Local works there. -->
 		<PublishAot Condition="'$(Aot)' == 'true' And '$(TargetFramework)' == 'net8.0'">true</PublishAot>
 	</PropertyGroup>
-	<!-- The two ways to reference the package. By default ChromaDotNet.Local, with the executables of every platform.
-	     -p:LocalPackages=core-rid: ChromaDotNet.Local.Core and the runtime package of this machine only.
-	     -p:LocalPackages=core: ChromaDotNet.Local.Core alone, without an executable. -->
-	<ItemGroup Condition="'$(LocalPackages)' == ''">
+	<!-- The ways to reference the packages. By default the two engines, ChromaDotNet.Local.ChromaDB and ChromaDotNet.Local.VecturaDB:
+	     the variable CHROMA_LOCAL_ENGINE chooses one.
+	     -p:LocalPackages=chromadb: ChromaDotNet.Local.ChromaDB, with the executables of every platform.
+	     -p:LocalPackages=chromadb-download: the same with ChromaDotNetLocalChromaDBDownload, which takes the executables out.
+	     -p:LocalPackages=vecturadb: ChromaDotNet.Local.VecturaDB, which downloads its executable.
+	     -p:LocalPackages=base: ChromaDotNet.Local alone, without an engine. -->
+	<ItemGroup Condition="'$(LocalPackages)' == '' Or '$(LocalPackages)' == 'chromadb' Or '$(LocalPackages)' == 'chromadb-download'">
+		<PackageReference Include="ChromaDotNet.Local.ChromaDB" Version="$(ChromaDotNetLocalChromaDBVersion)" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(LocalPackages)' == '' Or '$(LocalPackages)' == 'vecturadb'">
+		<PackageReference Include="ChromaDotNet.Local.VecturaDB" Version="$(ChromaDotNetLocalVecturaDBVersion)" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(LocalPackages)' == 'base'">
 		<PackageReference Include="ChromaDotNet.Local" Version="$(ChromaDotNetLocalVersion)" />
 	</ItemGroup>
-	<ItemGroup Condition="'$(LocalPackages)' != ''">
-		<PackageReference Include="ChromaDotNet.Local.Core" Version="$(ChromaDotNetLocalVersion)" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(LocalPackages)' == 'core-rid'">
-		<PackageReference Include="ChromaDotNet.Local.Runtime.$(NETCoreSdkRuntimeIdentifier)" Version="$(ChromaDotNetLocalVersion)" />
-	</ItemGroup>
+	<PropertyGroup Condition="'$(LocalPackages)' == 'chromadb-download'">
+		<ChromaDotNetLocalChromaDBDownload>true</ChromaDotNetLocalChromaDBDownload>
+	</PropertyGroup>
 </Project>
