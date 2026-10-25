@@ -18,4 +18,5 @@ The scripts and the tests are described in [Build](README.md#build), in the READ
 - A change to the build of the executables keeps the Linux builds reproducible: two builds of the same tag give the same bytes.
 
 The CI, in [.github/workflows/ci.yml](.github/workflows/ci.yml), runs on Windows, Linux x64 and arm64, and macOS arm64 and x64.
-Only the version tags publish the release and the packages.
+Only the tags publish a release and packages, those of their line: `v*` ChromaDotNet.Local, `chromadb-v*`
+ChromaDotNet.Local.ChromaDB and its runtime packages, `vecturadb-v*` ChromaDotNet.Local.VecturaDB.
