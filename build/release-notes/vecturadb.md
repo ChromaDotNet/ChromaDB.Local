@@ -1,4 +1,4 @@
-Preview of ChromaDotNet.Local.VecturaDB VERSION, with VecturaDB VECTURADB_VERSION, for ChromaDotNet.Local 1.5.9.1-preview.6. Community
+Preview of ChromaDotNet.Local.VecturaDB VERSION, with VecturaDB VECTURADB_VERSION, for ChromaDotNet.Local 1.5.9.1-preview.7. Community
 project, not affiliated with Chroma.
 
 [ChromaDotNet.Local.VecturaDB](https://www.nuget.org/packages/ChromaDotNet.Local.VecturaDB/VERSION) starts VecturaDB. VecturaDB is a

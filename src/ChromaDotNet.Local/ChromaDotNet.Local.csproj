@@ -23,7 +23,7 @@
 	<ItemGroup>
 		<!-- The public API, checked at build, as in the client. -->
 		<PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
-		<PackageReference Include="ChromaDotNet.Client" Version="2.14.0" />
+		<PackageReference Include="ChromaDotNet.Client" Version="2.18.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
 	</ItemGroup>
 	<!-- The guard of Linux and macOS, in runtimes/<rid>/native/ of the package, from artifacts/stage/guard/, where build/stage.sh puts
