@@ -8,7 +8,7 @@ Chroma, or VecturaDB, on this machine, without Docker and without Python, for
 [ChromaDotNet.Client](https://www.nuget.org/packages/ChromaDotNet.Client). `ChromaLocalServer.StartAsync` starts the server of an
 engine as a child process on 127.0.0.1, waits until it answers, and stops it with `Dispose` or when the application ends.
 
-Community project, not affiliated with Chroma.
+ChromaDotNet is an independent community project: .NET libraries and tools for Chroma. It is not affiliated with, endorsed by or sponsored by Chroma Inc. CHROMA is a registered trademark of Chroma Inc.
 
 > Preview: the API and the packages can still change.
 
