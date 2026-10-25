@@ -13,7 +13,7 @@
 		<PackageDescription>Chroma $(ChromaVersion) for ChromaDotNet.Local: ChromaLocalServer.StartAsync starts the executable of the Chroma CLI as a child process on 127.0.0.1, for ChromaDotNet.Client, and stops it with Dispose or when the application ends. With the executables for Windows x64, Linux x64 and arm64 (glibc 2.28 and later), macOS x64 and arm64, in its runtime packages; with the property ChromaDotNetLocalChromaDBDownload set to true in the project, the first start downloads the one of its platform instead. Community project, not affiliated with Chroma.</PackageDescription>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="ChromaDotNet.Local" Version="[$(LocalVersion), 2.0.0-0)" PrivateAssets="none" />
+		<PackageReference Include="ChromaDotNet.Local" Version="[$(LocalVersion), 2.0.0)" PrivateAssets="none" />
 		<PackageReference Include="ChromaDotNet.Local.ChromaDB.Runtime.win-x64" Version="[$(Version)]" PrivateAssets="none" />
 		<PackageReference Include="ChromaDotNet.Local.ChromaDB.Runtime.linux-x64" Version="[$(Version)]" PrivateAssets="none" />
 		<PackageReference Include="ChromaDotNet.Local.ChromaDB.Runtime.linux-arm64" Version="[$(Version)]" PrivateAssets="none" />

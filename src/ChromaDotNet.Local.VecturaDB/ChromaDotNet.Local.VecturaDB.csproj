@@ -15,7 +15,7 @@
 	</PropertyGroup>
 	<Import Project="VecturaDB.props" />
 	<ItemGroup>
-		<PackageReference Include="ChromaDotNet.Local" Version="[$(LocalVersion), 2.0.0-0)" PrivateAssets="none" />
+		<PackageReference Include="ChromaDotNet.Local" Version="[$(LocalVersion), 2.0.0)" PrivateAssets="none" />
 		<None Update="buildTransitive\ChromaDotNet.Local.VecturaDB.targets" Pack="true" PackagePath="buildTransitive/ChromaDotNet.Local.VecturaDB.targets" />
 		<!-- The notices of VecturaDB at the tag of the release, which build/vecturadb-notices.sh writes before the pack. -->
 		<None Include="$(MSBuildThisFileDirectory)..\..\artifacts\vecturadb\THIRD-PARTY-NOTICES.md" Condition="Exists('$(MSBuildThisFileDirectory)..\..\artifacts\vecturadb\THIRD-PARTY-NOTICES.md')" Pack="true" PackagePath="\" Visible="false" />
