@@ -1,8 +1,8 @@
 # ChromaDotNet.Local
 
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ChromaDotNet/ChromaDB.Local/badge)](https://scorecard.dev/viewer/?uri=github.com/ChromaDotNet/ChromaDB.Local)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15735/badge)](https://www.bestpractices.dev/projects/15735)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ChromaDotNet/ChromaDB.Local)
+[![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/ChromaDotNet/ChromaDB.Local?label=openssf%20scorecard)](https://scorecard.dev/viewer/?uri=github.com/ChromaDotNet/ChromaDB.Local)
+[![OpenSSF Best Practices](https://img.shields.io/cii/level/15735?label=openssf%20best%20practices)](https://www.bestpractices.dev/projects/15735)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/GitHub%20Codespaces-Open-blue?logo=github)](https://codespaces.new/ChromaDotNet/ChromaDB.Local)
 
 Chroma, or VecturaDB, on this machine, without Docker and without Python, for
 [ChromaDotNet.Client](https://www.nuget.org/packages/ChromaDotNet.Client). `ChromaLocalServer.StartAsync` starts the server of an
