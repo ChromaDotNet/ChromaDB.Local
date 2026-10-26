@@ -44,10 +44,10 @@ echo "== the cache of app: $(find /home/app/.cache/chromadotnet-local -type f ! 
 # Without a cache it can write, the start fails with what to do.
 output=$(su -s /bin/bash app -c "cd /tmp && HOME=/nonexistent XDG_CACHE_HOME= DOTNET_ROLL_FORWARD=Major dotnet /pub-chromadb-rid/ChromaDotNet.Local.TestHost.dll smoke" 2>&1); code=$?
 echo "$output" | grep -m1 "Exception" | cut -c1-300
-if [ $code -ne 0 ] && echo "$output" | grep -q "cannot execute /pub-chromadb-rid/chromadb and /pub-chromadb-rid/chromadotnet-local-guard" && echo "$output" | grep -q "chmod a+x"; then
+if [ $code -ne 0 ] && grep -q "cannot execute /pub-chromadb-rid/chromadb and /pub-chromadb-rid/chromadotnet-local-guard" <<< "$output" && grep -q "chmod a+x" <<< "$output"; then
   echo "ok   no cache: the message names the engine and the guard, and says chmod a+x"
 else
-  echo "FAIL no cache: exit $code"; fails=$((fails + 1))
+  echo "FAIL no cache: exit $code, the output:"; echo "$output"; fails=$((fails + 1))
 fi
 echo "failures: $fails"
 exit $fails
