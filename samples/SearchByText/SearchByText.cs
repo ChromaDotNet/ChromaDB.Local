@@ -1,6 +1,6 @@
-#:package ChromaDotNet.Local.ChromaDB@1.5.9.1-preview.6
-#:package ChromaDotNet.Client@2.17.0
-#:package ChromaDotNet.Embeddings@1.0.0-preview.3
+#:package ChromaDotNet.Local.ChromaDB@1.5.9.1-preview.7
+#:package ChromaDotNet.Client@2.18.1
+#:package ChromaDotNet.Embeddings@1.0.0-preview.4
 #:property PublishAot=false
 
 using ChromaDB.Client;
